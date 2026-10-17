@@ -4,8 +4,9 @@ Mobile Web-App (PWA) zum Zählen, wie oft etwas pro Tag, Woche oder Monat passie
 
 ## Quellen
 
-- Funktionsbeschreibung (Claude Doc): https://claude.ai/code/artifact/a37de7b4-e9cf-4d5e-95b9-677f518435a4 – ursprüngliche Spezifikation inkl. Abnahmekriterien. Inzwischen erweitert um: Monats-Items, Umsortieren per langem Drücken, Kalender im Wochenstreifen, Uhrzeit direkt über den System-Zeitwähler, Import per Text.
-- Designsystem „Kladde“: https://claude.ai/artifact/25cn5j6tcNppL3PF9caEGc – Tokens in `src/design/tokens.json`, Komponenten in `src/kladde/`. Regeln aus dessen README beachten (Pastellkarten, Textmarker, wellige Linien, keine Schatten auf Karten, Deutsch/du-Form).
+- `claude/Funktionsbeschreibung.md` – maßgebliche Beschreibung des **gebauten** Verhaltens inkl. Datenmodell, Stolperfallen und Abnahmekriterien. Vor Arbeit an Funktionen zuerst dort lesen.
+- `claude/Design.md` – Designsystem „Kladde“ (Fassung 2). Tokens in `src/design/tokens.json`, Komponenten in `src/kladde/`. Regeln beachten (Pastellkarten, Textmarker, wellige Linien, keine Schatten auf Karten, Deutsch/du-Form).
+- Beide Dokumente sind lebend: Wird Verhalten oder Gestaltung geändert, wandert die Änderung im selben Commit in das passende Dokument (neues Verhalten in den Abschnitt, neuer Prüfpunkt in die Abnahmekriterien). Kein Duplizieren von Befehlen oder Dateiaufbau – die stehen in `README.md`.
 
 ## Befehle
 
@@ -19,6 +20,11 @@ node scripts/build-single.mjs [--pwa|--artifact]   # Build ohne Vite (esbuild)
 ```
 
 Browser-Abnahmetests (Python + Playwright, ~150 Prüfungen): siehe README, Abschnitt „Tests im Browser“. Nach Änderungen an Gesten, Wochenstreifen, Sheets oder Diagrammen laufen lassen.
+
+## Commits
+
+- Keine Session-/Werbezeile in der Commit-Nachricht (kein „🤖 Generated with Claude Code“, kein Link auf die Session).
+- `Co-Authored-By: Claude ... <noreply@anthropic.com>` als letzte Zeile ist in Ordnung.
 
 ## Feste Regeln (aus dem Prototyp gelernt)
 

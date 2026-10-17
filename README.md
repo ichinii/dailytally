@@ -1,6 +1,6 @@
 # Daily Tally
 
-Zählt, wie oft etwas passiert – pro Tag (z. B. Zigaretten) oder pro Woche (z. B. Sport) – mit optionalem Zählziel, Pausenziel und Trend seit Aufnahmebeginn. Gebaut nach der „Daily Tally – Funktionsbeschreibung“, gestaltet im Designsystem **Kladde**.
+Zählt, wie oft etwas passiert – pro Tag (z. B. Wasser trinken) oder pro Woche (z. B. Sport) – mit optionalem Zählziel, Pausenziel und Trend seit Aufnahmebeginn. Gebaut nach der „Daily Tally – Funktionsbeschreibung“, gestaltet im Designsystem **Kladde**.
 
 ## Starten und bauen
 
