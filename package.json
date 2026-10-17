@@ -1,0 +1,22 @@
+{
+  "name": "daily-tally",
+  "private": true,
+  "version": "3.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "build:single": "node scripts/build-single.mjs",
+    "tokens": "node scripts/tokens-to-css.mjs",
+    "test": "node --test tests/lib.test.mjs"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}

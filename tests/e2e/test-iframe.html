@@ -1,0 +1,6 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;height:100%}iframe{border:0;width:100%;height:100%}</style></head>
+<body><script>
+const mode=new URLSearchParams(location.search).get('sandbox')||'allow-scripts allow-same-origin';
+const f=document.createElement('iframe'); f.setAttribute('sandbox',mode); f.src='../../dist-single/index.html'; document.body.appendChild(f);
+</script></body></html>

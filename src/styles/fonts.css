@@ -1,0 +1,9 @@
+/* Shantell Sans (SIL Open Font License, siehe assets/fonts/OFL.txt) — variabel: wght 300–800, INFM, BNCE.
+   Lokal eingebunden und auf Latein reduziert, damit die App ohne Netz mit der richtigen Schrift startet. */
+@font-face {
+  font-family: "Shantell Sans";
+  src: url("../assets/fonts/ShantellSans-var.woff") format("woff");
+  font-weight: 300 800;
+  font-style: normal;
+  font-display: swap;
+}

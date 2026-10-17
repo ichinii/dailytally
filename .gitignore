@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-single/
+dist-pwa/
+tests/e2e/seed.json
+tests/e2e/*.png
+tests/e2e/*-test.json
+tests/e2e/bad.json
+tests/e2e/v1.json
+tests/e2e/v2.json
+.DS_Store
