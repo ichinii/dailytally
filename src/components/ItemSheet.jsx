@@ -23,6 +23,8 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
   const [name, setName] = useState(item ? item.label : '');
   const [period, setPeriod] = useState(item ? item.period : 'day');
   const [goalType, setGoalType] = useState(initGoal ? initGoal.type : 'none');
+  // Richtung folgt dem Zieltyp; ohne Ziel wird sie gewählt.
+  const [direction, setDirection] = useState(item ? item.direction : 'up');
   const [goalValue, setGoalValue] = useState(initGoal ? String(initGoal.value) : '');
   const [pauseOn, setPauseOn] = useState(initPause != null);
   const [pauseH, setPauseH] = useState(initPause != null ? String(Math.floor(initPause / 60)) : '12');
@@ -47,7 +49,7 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
     setTried(true);
     if (!goalOk || !pauseOk) return;
     if (!editing) {
-      onCreate({ label: trimmed.slice(0, 40), period, countGoal: nextGoal, pauseMinutes: nextPause });
+      onCreate({ label: trimmed.slice(0, 40), period, direction, countGoal: nextGoal, pauseMinutes: nextPause });
       close();
       return;
     }
@@ -57,7 +59,7 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
       setTimeout(() => askRef.current && askRef.current.focus(), 0);
       return;
     }
-    onUpdate(item.id, { label: trimmed.slice(0, 40), countGoal: nextGoal, pauseMinutes: nextPause, mode: changed ? mode : null });
+    onUpdate(item.id, { label: trimmed.slice(0, 40), direction, countGoal: nextGoal, pauseMinutes: nextPause, mode: changed ? mode : null });
     close();
   };
 
@@ -113,7 +115,14 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
           <div className="kl-field">
             <span className="kl-field__label" id="dt-goal-label">{T.countGoal}</span>
             <div className="dt-goal-row">
-              <Tabs label={T.countGoal} value={goalType} onChange={(v) => { setGoalType(v); if (v !== 'none' && !goalValue) setGoalValue(v === 'max' ? '10' : '3'); }}
+              <Tabs label={T.countGoal} value={goalType}
+                onChange={(v) => {
+                  setGoalType(v);
+                  if (v !== 'none' && !goalValue) setGoalValue(v === 'max' ? '10' : '3');
+                  // Ein Höchstwert heißt „weniger ist besser“, ein Mindestwert das Gegenteil.
+                  if (v === 'max') setDirection('down');
+                  if (v === 'min') setDirection('up');
+                }}
                 items={[{ id: 'none', label: T.goalNone }, { id: 'max', label: T.goalMax }, { id: 'min', label: T.goalMin }]} />
               {goalType !== 'none' && (
                 <input
@@ -124,7 +133,9 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
               )}
             </div>
             {tried && !goalOk && <span className="kl-field__error">{T.goalError}</span>}
+            {goalType !== 'none' && <span className="kl-field__hint dt-tight">{T.dirFromGoal(goalType === 'max' ? T.dirLess : T.dirMore)}</span>}
           </div>
+
 
           {period === 'day' && (
             <div className="kl-field">
@@ -152,6 +163,16 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
               {tried && !pauseOk && <span className="kl-field__error">{T.pauseError}</span>}
             </div>
           )}
+
+          {/* Ohne Ziel ist die Richtung nicht ableitbar – dann wird sie gefragt. */}
+          {goalType === 'none' && (
+            <div className="dt-row-field">
+              <span className="kl-field__label" id="dt-dir-label">{T.direction}</span>
+              <Tabs label={T.direction} value={direction} onChange={setDirection}
+                items={[{ id: 'up', label: T.dirMore }, { id: 'down', label: T.dirLess }]} />
+            </div>
+          )}
+          {goalType === 'none' && <span className="kl-field__hint dt-tight">{T.dirHint}</span>}
 
           {editing && (hist.c || hist.p) && (
             <div className="dt-history">

@@ -42,7 +42,40 @@ function PauseRow({ r, today, goalMinutes, label, tint }) {
   );
 }
 
+/** Große Zahl bei „weniger ist besser“ ohne Limit: Zeit seit dem letzten Eintrag. */
+function SinceHero({ r, today, value }) {
+  const now = useNow(20000);
+  const p = runningPause(r, today, now);
+  if (!p.known) return <CountHero value={value} tagged={false} />;
+  const dur = formatDuration(p.minutes);
+  return (
+    <>
+      <output className="dt-counter__num dt-counter__num--time" data-testid="hero">{dur}</output>
+      <span className="dt-counter__lbl">{T.sinceLast}</span>
+    </>
+  );
+}
+
+/** `tagged`: nur eine Stelle je Karte trägt data-testid="value" – der echte Zähler. */
+function CountHero({ value, bump, tagged = true }) {
+  return (
+    <>
+      <output key={bump} className={'dt-counter__num' + (bump ? ' kl-counter__value--bump' : '')} data-testid={tagged ? 'value' : 'hero'}>{value}</output>
+      <span className="dt-counter__lbl">{T.entriesWord(value)}</span>
+    </>
+  );
+}
+
+/** Beschriftung des Zähl-Knopfs, damit Vorlesen die gezeigte Zahl erklärt. */
+function heroLabel(item, value, goal, r, today) {
+  if (item.direction !== 'down') return T.entriesOpen(value);
+  if (goal) return value <= goal.value ? T.restOpen(goal.value - value, goal.value) : T.overOpen(value - goal.value);
+  const p = runningPause(r, today, Date.now());
+  return p.known ? T.sinceOpen(formatDuration(p.minutes)) : T.entriesOpen(value);
+}
+
 function ItemCard({ item, tint, refLabel, value, goal, pauseGoal, showPause, r, today, onPlus, onMinus, onOpenEntries, onEdit }) {
+  const down = item.direction === 'down';
   const [bump, setBump] = useState(0);
   const prev = useRef(value);
   useEffect(() => { if (prev.current !== value) { prev.current = value; setBump((b) => b + 1); } }, [value]);
@@ -59,20 +92,34 @@ function ItemCard({ item, tint, refLabel, value, goal, pauseGoal, showPause, r, 
         </div>
         <div className="dt-counter">
           <Button icon="minus" label={T.minus} onClick={() => onMinus(item.id)} disabled={value === 0} />
-          <button type="button" className="dt-counter__value" onClick={() => onOpenEntries(item.id)} aria-label={T.entriesOpen(value)}>
-            <output key={bump} className={'dt-counter__num' + (bump ? ' kl-counter__value--bump' : '')} data-testid="value">{value}</output>
-            <span className="dt-counter__lbl">{T.entriesWord(value)}</span>
+          <button
+            type="button" className={'dt-counter__value' + (down && !goal ? ' dt-counter__value--wide' : '')}
+            onClick={() => onOpenEntries(item.id)} aria-label={heroLabel(item, value, goal, r, today)}
+          >
+            {!down ? <CountHero value={value} bump={bump} />
+              : goal ? (
+                <>
+                  <output key={bump} className={'dt-counter__num' + (bump ? ' kl-counter__value--bump' : '')} data-testid="hero">{Math.abs(goal.value - value)}</output>
+                  <span className="dt-counter__lbl">{value <= goal.value ? T.restOf(goal.value) : T.overLimit}</span>
+                </>
+              ) : <SinceHero r={r} today={today} value={value} />}
           </button>
           <Button variant="primary" icon="plus" label={T.plus} onClick={() => onPlus(item.id)} />
         </div>
       </div>
+      {down && (
+        <div className="dt-counter__sub dt-small kl-muted">
+          <output data-testid="value">{value}</output> {T.entriesWord(value)}
+        </div>
+      )}
       {goal && (
         <div className="dt-goal">
           <div className="dt-goal__line">
             <span className="dt-small">{T.goalText(goal.type, goal.value, item.period)}</span>
             <GoalStatus goal={goal} value={value} />
           </div>
-          <Bar value={value} max={goal.value} label={T.progressLabel(item.label)} tint={tint} />
+          {/* Bei „weniger ist besser“ leert sich der Balken, statt sich zu füllen. */}
+          <Bar value={down ? Math.max(0, goal.value - value) : value} max={goal.value} label={T.progressLabel(item.label)} tint={tint} />
         </div>
       )}
       {showPause && pauseGoal != null && <PauseRow r={r} today={today} goalMinutes={pauseGoal} label={item.label} tint={tint} />}

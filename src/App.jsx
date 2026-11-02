@@ -181,24 +181,26 @@ export default function App() {
     setData((d) => ({ ...d, entries: d.entries.map((e) => (e.id === entryId ? { ...e, ts } : e)) }));
   }, []);
 
-  const onCreate = useCallback(({ label, period, countGoal, pauseMinutes }) => {
+  const onCreate = useCallback(({ label, period, direction, countGoal, pauseMinutes }) => {
     const t = checkDay();
     const from = numToKey(periodStart(period, t));
     const item = {
-      id: newId('i'), label, period, createdDay: numToKey(t),
+      id: newId('i'), label, period, createdDay: numToKey(t), direction,
       countGoals: countGoal ? [{ from, type: countGoal.type, value: countGoal.value }] : [],
       pauseGoals: period === 'day' && pauseMinutes != null ? [{ from, minutes: pauseMinutes }] : [],
+      gapGoals: [], pauses: [],
     };
     setData((d) => ({ ...d, items: [...d.items, item] }));
   }, [checkDay]);
 
-  const onUpdate = useCallback((id, { label, countGoal, pauseMinutes, mode }) => {
+  const onUpdate = useCallback((id, { label, direction, countGoal, pauseMinutes, mode }) => {
     const t = checkDay();
     setData((d) => ({
       ...d,
       items: d.items.map((it) => {
         if (it.id !== id) return it;
-        const next = { ...it, label };
+        // Die Richtung ist reine Anzeige, sie braucht keinen Verlauf.
+        const next = { ...it, label, direction };
         if (mode) {
           const cur = periodStart(it.period, t);
           const r = indexRef.current.byItem.get(id);

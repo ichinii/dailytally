@@ -6,7 +6,7 @@ Datenformat-Version in Klammern, wenn sie sich geändert hat – dann läuft bei
 
 ## Unveröffentlicht
 
-– noch nichts –
+- Items haben eine Richtung: „mehr ist besser“ oder „weniger ist besser“. Bei „weniger ist besser“ zeigt die Karte groß das Restbudget statt des steigenden Zählers – und ohne Limit die Zeit seit dem letzten Eintrag. Die Knöpfe behalten ihre Bedeutung: Plus erfasst, Minus korrigiert. Bestehende Items bekommen die Richtung aus ihrem Zieltyp.
 
 ## 1.0 – 2026-11-02
 

@@ -34,6 +34,11 @@ export const T = {
   perWeek: 'pro Woche',
   perMonth: 'pro Monat',
   per: { day: 'pro Tag', week: 'pro Woche', month: 'pro Monat' },
+  direction: 'Richtung',
+  dirMore: 'mehr ist besser',
+  dirLess: 'weniger ist besser',
+  dirFromGoal: (label) => `Richtung: ${label} – aus dem Ziel abgeleitet.`,
+  dirHint: 'Bestimmt, welche Zahl die Karte groß anzeigt. Plus erfasst immer einen Eintrag.',
   goalMax: 'höchstens',
   goalMin: 'mindestens',
   goalText: (type, value, period) => `${type === 'max' ? 'höchstens' : 'mindestens'} ${value} ${period === 'week' ? 'pro Woche' : period === 'month' ? 'pro Monat' : 'pro Tag'}`,
@@ -49,6 +54,14 @@ export const T = {
   pauseGoal: (dur) => `Ziel ${dur}`,
   pauseReached: 'Ziel erreicht',
   progressLabel: (name) => `Fortschritt ${name}`,
+  // Items, bei denen weniger besser ist: die große Zahl zeigt nicht den Zähler.
+  restOf: (max) => `noch von ${max}`,
+  overLimit: 'über dem Limit',
+  sinceLast: 'seit dem letzten Mal',
+  countLine: (v) => `${v} ${v === 1 ? 'Eintrag' : 'Einträge'}`,
+  restOpen: (rest, max) => `noch ${n(rest, 'Eintrag', 'Einträge')} von ${max} – Liste öffnen`,
+  overOpen: (over) => `${n(over, 'Eintrag', 'Einträge')} über dem Limit – Liste öffnen`,
+  sinceOpen: (dur) => `seit ${dur} kein Eintrag – Liste öffnen`,
   pauseProgressLabel: (name) => `Pause ${name}`,
 
   // Toasts

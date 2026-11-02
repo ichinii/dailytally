@@ -102,6 +102,7 @@ Ein Item wird über einen Hinzufügen-Knopf unter der Liste angelegt (bei leerer
 | Name | ja | Text, max. 40 Zeichen (Hinweis ab 30 Zeichen) |
 | Zeitraum | ja | pro Tag / pro Woche / pro Monat; nach dem Anlegen nicht mehr änderbar (im Bearbeiten-Modus als Marke mit Hinweis) |
 | Zählziel | nein | „kein“ / „höchstens“ / „mindestens“ + ganze Zahl ≥ 1 (Vorschlag 10 bzw. 3) |
+| Richtung | ja | „mehr ist besser“ / „weniger ist besser“. Wird nur gefragt, wenn kein Zählziel gesetzt ist; mit Ziel folgt sie dem Zieltyp (höchstens → weniger ist besser) und wird als Hinweis angezeigt. Änderbar, ohne Rückfrage nach „ab jetzt“ oder „Korrektur“ – die Richtung ist Anzeige, kein Verlauf. |
 | Pausenziel | nein | Schalter + Dauer in Stunden und Minuten (Vorschlag 12 h); nur bei Tages-Items angeboten |
 
 **Zielbewertung** (gilt überall in der App)
@@ -150,6 +151,11 @@ Die Hauptansicht besteht aus einem wischbaren Wochenstreifen zur Tagesauswahl un
 
 - Zeigen Name, Bezug („heute“ bzw. das Datum; bei Wochen-Items „diese Woche“ bzw. „Woche vom …“, bei Monats-Items „diesen Monat“ bzw. „Oktober 2026“), den Wert des Zeitraums, das für **diesen** Zeitraum geltende Ziel samt Status (laut Zielverlauf) und einen Fortschritt zum Ziel.
 - Wert: Summe der Einträge im Zeitraum, der den gewählten Tag enthält (Tag, Woche oder Monat). Ändert sich der Wert, hüpft die Zahl kurz.
+- **Welche Zahl groß steht, hängt an der Richtung.** Bei „mehr ist besser“ ist es der Zähler. Bei „weniger ist besser“ ist es
+  - mit Zählziel das Restbudget („3 – noch von 8“), bei Überschreitung der Abstand zum Limit („1 – über dem Limit“); der Fortschrittsbalken leert sich, statt sich zu füllen;
+  - ohne Zählziel die Zeit seit dem letzten Eintrag („2 h 32 min – seit dem letzten Mal“), und solange die unbekannt ist (kein Eintrag oder letzter Eintrag ohne Uhrzeit) der Zähler.
+  Der Zähler selbst bleibt in beiden Fällen als zweite Zeile sichtbar. Grund: ein Zähler, der nach oben läuft, fühlt sich nach Fortschritt an – bei Dingen, die man lassen will, belohnt das die falsche Richtung.
+- **Die Bedeutung der Knöpfe ändert sich nie**, in keiner Richtung: Plus erfasst ein Ereignis, Minus ist die Korrektur. Das Erfassen wird auch bei „weniger ist besser“ nicht erschwert – untererfasste Daten wären schlimmer als eine unbequeme Zahl.
 - **Plus** legt einen Eintrag am gewählten Tag an. Ist der gewählte Tag heute, wird `ts` = jetzt gespeichert, sonst `ts` = `null`. Fällt der Tageswechsel genau in diesen Moment, wird auf den neuen Tag gebucht.
 - **Minus** entfernt den zuletzt angelegten Eintrag des gewählten Tages. Bei Wochen- und Monats-Items, wenn der gewählte Tag keinen hat: den zuletzt angelegten Eintrag des Zeitraums. Bei Wert 0 deaktiviert.
 - Nach Plus am heutigen Tag erscheint kurz ein Toast „Erfasst 14:32“ mit der Aktion „Zeit ändern“, die die Eintragsliste mit direkt geöffneter Zeitauswahl für diesen Eintrag zeigt. Hatte das Item ein Pausenziel und war die laufende Pause bekannt, steht zusätzlich „Pause beendet: 9 h 40 min“ im selben Toast.
@@ -292,6 +298,15 @@ Erfüllt in Handy-Breite und im sandboxed iframe, ohne Fehler in der Konsole. `[
 - [x] Zeitraum eines bestehenden Items ist nicht änderbar.
 - [x] Nur den Namen ändern fragt nicht nach „Ab jetzt / Korrektur“.
 - [x] Pausenziel wird nur bei Tages-Items angeboten.
+
+**Richtung**
+
+- [x] Ein Item mit „höchstens 8“ zeigt groß das Restbudget und die Beschriftung „noch von 8“; der Zähler steht als zweite Zeile daneben.
+- [x] Über dem Limit zeigt dieselbe Stelle den Abstand zum Limit und „über dem Limit“.
+- [x] Ein Item mit „mindestens“ zeigt unverändert den Zähler und keine zweite Zeile.
+- [x] „Weniger ist besser“ ohne Ziel zeigt groß die Zeit seit dem letzten Eintrag; ohne Eintrag mit Uhrzeit bleibt es beim Zähler.
+- [x] Plus legt auch bei „weniger ist besser“ einen Eintrag an, Minus entfernt ihn.
+- [x] Beim Anlegen wird die Richtung nur ohne Zählziel gefragt; „höchstens“ legt „weniger ist besser“ an.
 
 **Track-Ansicht**
 

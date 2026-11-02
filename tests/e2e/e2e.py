@@ -497,7 +497,8 @@ def test_export_import():
         pg.get_by_role('button', name='Alle Daten löschen').click(); pg.wait_for_timeout(150)
         check('Alle löschen: zweistufig mit Warnung und Export-Hinweis', pg.locator('[data-testid=delete-all]', has_text='exportiere').count() == 1 and len(stored(pg)['items']) == 5)
         pg.get_by_role('button', name='Ja, alles löschen').click(); pg.wait_for_timeout(200)
-        check('Danach leerer Ausgangszustand', stored(pg) == {'version': 3, 'items': [], 'entries': []})
+        st = stored(pg)
+        check('Danach leerer Ausgangszustand', st['items'] == [] and st['entries'] == [], st)
         pg.locator('[data-testid=import-file]').set_input_files(path); pg.wait_for_timeout(600)
         check('Import fragt „… durch 5 Items und N Einträge ersetzen?“', pg.locator('.dt-sheet', has_text='durch 5 Items und').count() == 1)
         pg.get_by_test_id('import-confirm').click(); pg.wait_for_timeout(500)
@@ -944,13 +945,73 @@ def test_migration():
               len(bak) == 1 and pg.locator('article.dt-item').count() == 0, keys(pg))
         b.close()
 
+# ------------------------------------------------------------------ Richtung der großen Zahl
+def test_direction():
+    hero = lambda pg, name: card(pg, name).locator('[data-testid=hero]').inner_text()
+    with sync_playwright() as p:
+        b, ctx = new_ctx(p)
+        d = data(
+            [item('z', 'Zigaretten', goals=[{'from': '2026-10-01', 'type': 'max', 'value': 8}]),
+             item('o', 'Ohne Limit'),
+             item('s', 'Sport', period='week', goals=[{'from': '2026-10-12', 'type': 'min', 'value': 3}])],
+            entries_n('z', '2026-10-17', 5, ts=ms(t(2026, 10, 17, 12, 0))) + entries_n('s', '2026-10-15', 2),
+        )
+        pg = page(ctx, d, now=NOW, label='dir')
+        # Höchstwert → weniger ist besser: Restbudget groß, Zähler klein daneben.
+        check('Limit-Item zeigt groß das Restbudget', hero(pg, 'Zigaretten') == '3')
+        check('Beschriftung nennt das Limit', card(pg, 'Zigaretten').locator('.dt-counter__lbl').inner_text() == 'noch von 8')
+        check('Der Zähler bleibt als zweite Zeile sichtbar', value(pg, 'Zigaretten') == 5)
+        # Mindestwert → mehr ist besser: unverändert der Zähler.
+        check('Mindest-Item zeigt groß den Zähler', value(pg, 'Sport') == 2 and card(pg, 'Sport').locator('[data-testid=hero]').count() == 0)
+        check('Mindest-Item ohne zweite Zeile', card(pg, 'Sport').locator('.dt-counter__sub').count() == 0)
+        # Ohne Ziel ist die Richtung nicht ableitbar: Vorbelegung bleibt „mehr ist besser“.
+        check('Item ohne Ziel behält den gewöhnlichen Zähler',
+              value(pg, 'Ohne Limit') == 0 and card(pg, 'Ohne Limit').locator('[data-testid=hero]').count() == 0)
+        # Plus bleibt Plus: erfassen, nicht verbrauchen.
+        card(pg, 'Zigaretten').get_by_role('button', name='Eintrag hinzufügen').click(); pg.wait_for_timeout(300)
+        check('Plus erfasst auch bei „weniger ist besser“ einen Eintrag', value(pg, 'Zigaretten') == 6 and hero(pg, 'Zigaretten') == '2')
+        card(pg, 'Zigaretten').get_by_role('button', name='Letzten Eintrag entfernen').click(); pg.wait_for_timeout(300)
+        check('Minus bleibt die Korrektur', value(pg, 'Zigaretten') == 5 and hero(pg, 'Zigaretten') == '3')
+        # Über dem Limit dreht die Beschriftung.
+        for _ in range(4):
+            card(pg, 'Zigaretten').get_by_role('button', name='Eintrag hinzufügen').click(); pg.wait_for_timeout(120)
+        check('Über dem Limit: Abstand zum Limit mit eigener Beschriftung',
+              hero(pg, 'Zigaretten') == '1' and card(pg, 'Zigaretten').locator('.dt-counter__lbl').inner_text() == 'über dem Limit', value(pg, 'Zigaretten'))
+        b.close()
+
+        # Ohne Limit mit Eintrag: Dauer seit dem letzten Mal.
+        b, ctx = new_ctx(p)
+        d2 = data([item('o', 'Ohne Limit')], [{'id': 'x1', 'itemId': 'o', 'day': '2026-10-17', 'ts': ms(t(2026, 10, 17, 12, 0))}])
+        pg = page(ctx, d2, now=NOW, label='dir2')
+        card(pg, 'Ohne Limit').locator('.dt-item__name').click(); pg.wait_for_timeout(450)
+        pg.get_by_role('tab', name='weniger ist besser').click(); pg.wait_for_timeout(100)
+        pg.get_by_test_id('save').click(); pg.wait_for_timeout(450)
+        check('Richtung ohne Ziel wählbar und gespeichert', stored(pg)['items'][0]['direction'] == 'down', stored(pg)['items'][0])
+        check('Ohne Limit zeigt groß die Zeit seit dem letzten Eintrag', hero(pg, 'Ohne Limit') == '2 h 32 min', hero(pg, 'Ohne Limit'))
+        check('Beschriftung nennt den Bezug', card(pg, 'Ohne Limit').locator('.dt-counter__lbl').inner_text() == 'seit dem letzten Mal')
+        b.close()
+
+        # Beim Anlegen folgt die Richtung dem Zieltyp.
+        b, ctx = new_ctx(p)
+        pg = page(ctx, now=NOW, label='dir3')
+        pg.get_by_role('button', name='Erstes Item anlegen').click(); pg.wait_for_timeout(450)
+        pg.locator('#dt-name').fill('Neu')
+        check('Ohne Ziel wird die Richtung gefragt', pg.get_by_role('tab', name='weniger ist besser').count() == 1)
+        pg.locator('.dt-sheet').get_by_role('tab', name='höchstens').click(); pg.wait_for_timeout(100)
+        check('Mit Ziel verschwindet die Frage und wird erklärt',
+              pg.get_by_role('tab', name='weniger ist besser').count() == 0 and pg.locator('.dt-sheet', has_text='aus dem Ziel abgeleitet').count() == 1)
+        pg.get_by_test_id('save').click(); pg.wait_for_timeout(450)
+        check('Höchstwert legt „weniger ist besser“ an', stored(pg)['items'][0]['direction'] == 'down', stored(pg)['items'][0])
+        b.close()
+
 for name, fn in [('items', test_create_and_sheet), ('drag', test_sheet_drag), ('goals', test_goal_eval_and_history),
                  ('plus', test_plus_minus), ('strip', test_strip), ('times', test_day_boundary_and_times),
                  ('pauses', test_pauses), ('overview', test_overview), ('perf', test_overview_perf),
                  ('export', test_export_import), ('iframes', test_iframes), ('offline', test_offline), ('theme', test_dark_and_layout),
                  ('counter', test_counter_stable), ('reorder', test_reorder), ('jump', test_today_jump_and_calendar), ('ov2', test_overview_v2),
                  ('r3strip', test_round3_strip_and_drop), ('r3scroll', test_round3_scroll), ('r3month', test_round3_month_and_import),
-                 ('migrate', test_migration)]:
+                 ('migrate', test_migration),
+                 ('dir', test_direction)]:
     run(name, fn)
 
 print('\n==== ', sum(1 for r in RESULTS if r[1]), 'von', len(RESULTS), 'bestanden')
