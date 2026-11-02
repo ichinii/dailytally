@@ -5,6 +5,7 @@ import ItemCard from './ItemCard.jsx';
 import ReorderList from './ReorderList.jsx';
 import { mondayOf, monthStartOf, formatDayShort, formatDayWithWeekday, formatMonthYear } from '../lib/days.js';
 import { countGoalAt, gapGoalAt, pauseGoalAt, periodStart } from '../lib/goals.js';
+import { isPausedDay, pausedInPeriod } from '../lib/pauses.js';
 import { periodCount } from '../lib/stats.js';
 import { tintFor } from '../lib/ui.js';
 import { T } from '../strings.js';
@@ -55,6 +56,10 @@ export default function TrackView({ data, index, today, selected, onSelect, earl
                   showPause={selected === today && item.period === 'day'}
                   gapGoal={gapGoalAt(item, periodStart(item.period, today))}
                   showGap={selected === today}
+                  dayPaused={isPausedDay(item, selected)}
+                  periodPaused={pausedInPeriod(item, item.period, selected)}
+                  canResume={selected === today && isPausedDay(item, today)}
+                  onResume={actions.onResumeItem}
                   onPlus={actions.onPlus} onMinus={actions.onMinus}
                   onOpenEntries={actions.onOpenEntries} onEdit={actions.onEdit}
                 />

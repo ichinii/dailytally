@@ -5,6 +5,7 @@ import { dayOfTs, keyToNum, numToKey, mondayOf, weekRangeLabel, tsForDayTime, fo
 import { evaluate, countGoalAt, applyCountGoal } from '../src/lib/goals.js';
 import { buildIndex, dailyPauses, gapBreaks, runningPause, buildSeries, computeItemStats } from '../src/lib/stats.js';
 import { parseImport, exportText } from '../src/lib/importExport.js';
+import { isPausedDay, openPause, pauseDay, pauseOpen, pauseUntil, pausedInPeriod, pausedMask, resume } from '../src/lib/pauses.js';
 
 const at = (y, m, d, h, mi) => new Date(y, m - 1, d, h, mi).getTime();
 const K = keyToNum;
@@ -157,4 +158,47 @@ test('Monats-Zeitraum: Anfang, Ende, Ziel ab Monatsanfang', async () => {
   const item = { period: 'month', countGoals: [{ from: '2026-10-01', type: 'min', value: 2 }] };
   assert.equal(countGoalAt(item, periodStart('month', K('2026-10-20'))).value, 2);
   assert.equal(countGoalAt(item, periodStart('month', K('2026-09-20'))), null);
+});
+
+// ---------- Aussetzen ----------
+test('Aussetzen: Tage, Zeiträume und Beenden', () => {
+  const mk = (pauses) => ({ id: 'a', label: 'A', period: 'day', createdDay: '2026-10-01', countGoals: [], pauseGoals: [], gapGoals: [], pauses });
+  const it = mk([{ from: '2026-10-05', to: '2026-10-07' }, { from: '2026-10-20', to: null }]);
+  assert.equal(isPausedDay(it, K('2026-10-04')), false);
+  assert.equal(isPausedDay(it, K('2026-10-05')), true);
+  assert.equal(isPausedDay(it, K('2026-10-07')), true);
+  assert.equal(isPausedDay(it, K('2026-10-08')), false);
+  assert.equal(isPausedDay(it, K('2027-01-01')), true, 'offener Zeitraum reicht in die Zukunft');
+  assert.deepEqual(openPause(it), { from: '2026-10-20', to: null });
+  assert.equal(openPause(mk([])), null);
+
+  // Maske über einen Ausschnitt
+  assert.deepEqual([...pausedMask(it, K('2026-10-04'), K('2026-10-08'))], [0, 1, 1, 1, 0]);
+
+  // Zeitraum: Woche vom 5.10. ist ganz aus, Woche vom 12.10. gar nicht
+  const woche = { ...it, period: 'week' };
+  assert.deepEqual(pausedInPeriod(woche, 'week', K('2026-10-06')), { any: true, all: false });
+  assert.deepEqual(pausedInPeriod(woche, 'week', K('2026-10-14')), { any: false, all: false });
+  assert.deepEqual(pausedInPeriod({ ...it, pauses: [{ from: '2026-10-05', to: '2026-10-11' }] }, 'week', K('2026-10-06')), { any: true, all: true });
+});
+
+test('Aussetzen: angrenzende Zeiträume verschmelzen, Beenden teilt auf', () => {
+  const mk = (pauses) => ({ pauses });
+  // Grenzt direkt an den 5.–7. an: wird ein Zeitraum, keine zwei
+  assert.deepEqual(pauseDay(mk([{ from: '2026-10-05', to: '2026-10-07' }]), K('2026-10-08')),
+    [{ from: '2026-10-05', to: '2026-10-08' }]);
+  // Mitten in einem Zeitraum ändert nichts
+  assert.deepEqual(pauseDay(mk([{ from: '2026-10-05', to: '2026-10-07' }]), K('2026-10-06')),
+    [{ from: '2026-10-05', to: '2026-10-07' }]);
+  assert.deepEqual(pauseOpen(mk([]), K('2026-11-01')), [{ from: '2026-11-01', to: null }]);
+  assert.deepEqual(pauseUntil(mk([]), K('2026-11-01'), K('2026-11-10')), [{ from: '2026-11-01', to: '2026-11-10' }]);
+  assert.deepEqual(pauseUntil(mk([]), K('2026-11-05'), K('2026-11-01')), [{ from: '2026-11-05', to: '2026-11-05' }], 'Ende vor Beginn wird auf einen Tag gekürzt');
+
+  // Beenden: heute zählt wieder
+  assert.deepEqual(resume(mk([{ from: '2026-10-20', to: null }]), K('2026-10-25')), [{ from: '2026-10-20', to: '2026-10-24' }]);
+  assert.deepEqual(resume(mk([{ from: '2026-10-25', to: null }]), K('2026-10-25')), [], 'am selben Tag beendet = nie ausgesetzt');
+  assert.deepEqual(resume(mk([{ from: '2026-10-20', to: '2026-10-30' }]), K('2026-10-25')),
+    [{ from: '2026-10-20', to: '2026-10-24' }, { from: '2026-10-26', to: '2026-10-30' }], 'Beenden mitten drin teilt auf');
+  assert.deepEqual(resume(mk([{ from: '2026-10-20', to: '2026-10-30' }]), K('2026-11-05')),
+    [{ from: '2026-10-20', to: '2026-10-30' }], 'außerhalb bleibt unberührt');
 });

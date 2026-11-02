@@ -37,6 +37,7 @@ node scripts/build-single.mjs --pwa    # dist-pwa/ – wie npm run build
 | `src/lib/goals.js` | Zielverlauf („Ab jetzt“ / „Korrektur“), Zielbewertung |
 | `src/lib/stats.js` | Index über alle Einträge, Pausen, Verläufe, Kennzahlen |
 | `src/lib/migrations.js` | Migrationskette des Datenformats (`DATA_VERSION`, ein Schritt pro Release) |
+| `src/lib/pauses.js` | Aussetz-Zeiträume je Item (prüfen, setzen, beenden, verschmelzen) |
 | `src/lib/importExport.js` | Import (aktuelles Format, ältere über die Kette, Prototyp v1/v2), Export |
 | `src/lib/storage.js` | `localStorage` (`daily-tally-v3`), Migration beim Laden, alles in try/catch |
 | `src/lib/prefs.js` | gemerkte Anzeige-Einstellungen (Auflösung je Item) in `daily-tally-ui` |

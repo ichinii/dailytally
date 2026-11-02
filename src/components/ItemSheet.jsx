@@ -2,10 +2,20 @@ import React, { useRef, useState } from 'react';
 import { Button, Icon, Tabs, Tag } from '../kladde/kladde.js';
 import DragSheet from './DragSheet.jsx';
 import { countGoalAt, gapGoalAt, pauseGoalAt, periodStart, countGoalChanged, gapGoalChanged, pauseGoalChanged, PERIODS } from '../lib/goals.js';
-import { formatDayShort, formatDuration, keyToNum } from '../lib/days.js';
+import { formatDayShort, formatDuration, keyToNum, numToKey } from '../lib/days.js';
+import { isPausedDay, openPause } from '../lib/pauses.js';
 import { T } from '../strings.js';
 
 const parseIntStrict = (s) => (/^\s*\d+\s*$/.test(s) ? parseInt(s, 10) : NaN);
+
+/** Kurzfassung des Aussetz-Zustands für die Kopfzeile des Abschnitts. */
+function offState(item, today) {
+  const open = openPause(item);
+  if (open) return T.offSince(formatDayShort(keyToNum(open.from)));
+  const cur = (item.pauses || []).find((p) => p.to !== null && keyToNum(p.from) <= today && today <= keyToNum(p.to));
+  if (cur) return T.offUntil(formatDayShort(keyToNum(cur.to)));
+  return T.offSectionOff;
+}
 
 function historyText(item) {
   const c = item.countGoals.map((g) => `${T.historyFrom(formatDayShort(keyToNum(g.from)))}: ${g.value == null ? T.historyNone : `${g.type === 'max' ? T.goalMax : T.goalMin} ${g.value}`}`);
@@ -14,7 +24,7 @@ function historyText(item) {
 }
 
 /** Anlegen und Bearbeiten eines Items im selben Eingabe-Sheet. */
-export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate, onDelete, onClosed }) {
+export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate, onDelete, onPause, onResume, onClosed }) {
   const editing = !!item;
   const curStart = item ? periodStart(item.period, today) : today;
   const initGoal = item ? countGoalAt(item, curStart) : null;
@@ -35,6 +45,9 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
   const [gapM, setGapM] = useState(initGap != null ? String(initGap % 60) : '0');
   // Zugeklappt, solange nichts gesetzt ist: so bleiben die Tippfelder oben über der Tastatur.
   const [foldOpen, setFoldOpen] = useState(initPause != null || initGap != null);
+  const pausedNow = !!item && isPausedDay(item, today);
+  const [offOpen, setOffOpen] = useState(pausedNow);
+  const [until, setUntil] = useState('');
   const [tried, setTried] = useState(false);
   const [asking, setAsking] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -233,6 +246,47 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
             </div>
           )}
           {goalType === 'none' && <span className="kl-field__hint dt-tight">{T.dirHint}</span>}
+
+          {editing && (
+            <div className="dt-fold">
+              <button type="button" className="dt-fold__head" aria-expanded={offOpen} onClick={() => setOffOpen((o) => !o)}>
+                <span className="kl-field__label">{T.offSection}</span>
+                <span className="kl-muted dt-small">{offState(item, today)}</span>
+                <Icon name="chevron-down" size={18} />
+              </button>
+              {offOpen && (
+                <div className="dt-off-actions">
+                  <span className="kl-field__hint dt-tight">{T.offHint}</span>
+                  {pausedNow
+                    ? <Button icon="undo" onClick={() => { onResume(item.id); close(); }} data-testid="off-resume">{T.offResume}</Button>
+                    : (
+                      <>
+                        <Button icon="moon" onClick={() => { onPause(item.id, { kind: 'day' }); close(); }} data-testid="off-today">{T.offToday}</Button>
+                        <Button icon="moon" onClick={() => { onPause(item.id, { kind: 'open' }); close(); }} data-testid="off-open">{T.offOpen}</Button>
+                        <div className="dt-row-field">
+                          <label className="kl-field__label" htmlFor="dt-off-until">{T.offUntilLabel}</label>
+                          <input
+                            id="dt-off-until" className="kl-input dt-date" type="date" value={until}
+                            min={numToKey(today)} onChange={(e) => setUntil(e.target.value)}
+                          />
+                          <Button
+                            icon="moon" disabled={!until}
+                            onClick={() => { onPause(item.id, { kind: 'until', until }); close(); }} data-testid="off-until"
+                          >{T.offUntilAction}</Button>
+                        </div>
+                      </>
+                    )}
+                  {item.pauses.length > 0 && (
+                    <span className="dt-small kl-muted">
+                      {T.offHistory}: {item.pauses.map((p) => (p.to === null
+                        ? T.offRangeOpen(formatDayShort(keyToNum(p.from)))
+                        : T.offRange(formatDayShort(keyToNum(p.from)), formatDayShort(keyToNum(p.to))))).join(' · ')}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {editing && (hist.c || hist.p || hist.g) && (
             <div className="dt-history">

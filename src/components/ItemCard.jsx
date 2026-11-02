@@ -98,14 +98,15 @@ function GapRow({ r, today, goalMinutes, label, tint }) {
   );
 }
 
-function ItemCard({ item, tint, refLabel, value, goal, pauseGoal, gapGoal, showPause, showGap, r, today, onPlus, onMinus, onOpenEntries, onEdit }) {
+function ItemCard({ item, tint, refLabel, value, goal, pauseGoal, gapGoal, showPause, showGap, dayPaused, periodPaused, canResume, r, today, onPlus, onMinus, onOpenEntries, onResume, onEdit }) {
   const down = item.direction === 'down';
+  const off = periodPaused && periodPaused.any;
   const [bump, setBump] = useState(0);
   const prev = useRef(value);
   useEffect(() => { if (prev.current !== value) { prev.current = value; setBump((b) => b + 1); } }, [value]);
 
   return (
-    <Card tint={tint} className="dt-item" as="article">
+    <Card tint={tint} className={'dt-item' + (off ? ' dt-item--off' : '')} as="article">
       <div className="dt-item__top">
         <div className="dt-item__titles">
           <Mark tint={tint} className="dt-item__ref">{refLabel}</Mark>
@@ -115,7 +116,7 @@ function ItemCard({ item, tint, refLabel, value, goal, pauseGoal, gapGoal, showP
           </button>
         </div>
         <div className="dt-counter">
-          <Button icon="minus" label={T.minus} onClick={() => onMinus(item.id)} disabled={value === 0} />
+          <Button icon="minus" label={T.minus} onClick={() => onMinus(item.id)} disabled={value === 0 || dayPaused} />
           <button
             type="button" className={'dt-counter__value' + (down && !goal ? ' dt-counter__value--wide' : '')}
             onClick={() => onOpenEntries(item.id)} aria-label={heroLabel(item, value, goal, r, today)}
@@ -128,9 +129,18 @@ function ItemCard({ item, tint, refLabel, value, goal, pauseGoal, gapGoal, showP
                 </>
               ) : <SinceHero r={r} today={today} value={value} />}
           </button>
-          <Button variant="primary" icon="plus" label={T.plus} onClick={() => onPlus(item.id)} />
+          <Button variant="primary" icon="plus" label={T.plus} onClick={() => onPlus(item.id)} disabled={dayPaused} />
         </div>
       </div>
+      {off && (
+        <div className="dt-off" data-testid="off">
+          <div className="dt-off__line">
+            <Tag tint="sky" icon="moon">{periodPaused.all ? T.offTag : T.offPartly}</Tag>
+            {canResume && <Button icon="undo" onClick={() => onResume(item.id)}>{T.offResume}</Button>}
+          </div>
+          <span className="kl-muted dt-small">{T.offHint}</span>
+        </div>
+      )}
       {down && (
         <div className="dt-counter__sub dt-small kl-muted">
           <output data-testid="value">{value}</output> {T.entriesWord(value)}
@@ -140,14 +150,14 @@ function ItemCard({ item, tint, refLabel, value, goal, pauseGoal, gapGoal, showP
         <div className="dt-goal">
           <div className="dt-goal__line">
             <span className="dt-small">{T.goalText(goal.type, goal.value, item.period)}</span>
-            <GoalStatus goal={goal} value={value} />
+            {off ? <Tag tint="sky">{periodPaused.all ? T.offTag : T.offPartly}</Tag> : <GoalStatus goal={goal} value={value} />}
           </div>
           {/* Bei „weniger ist besser“ leert sich der Balken, statt sich zu füllen. */}
           <Bar value={down ? Math.max(0, goal.value - value) : value} max={goal.value} label={T.progressLabel(item.label)} tint={tint} />
         </div>
       )}
-      {showGap && gapGoal != null && <GapRow r={r} today={today} goalMinutes={gapGoal} label={item.label} tint={tint} />}
-      {showPause && pauseGoal != null && <PauseRow r={r} today={today} goalMinutes={pauseGoal} label={item.label} tint={tint} />}
+      {showGap && !dayPaused && gapGoal != null && <GapRow r={r} today={today} goalMinutes={gapGoal} label={item.label} tint={tint} />}
+      {showPause && !dayPaused && pauseGoal != null && <PauseRow r={r} today={today} goalMinutes={pauseGoal} label={item.label} tint={tint} />}
     </Card>
   );
 }

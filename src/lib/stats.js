@@ -5,6 +5,7 @@ import {
 } from './days.js';
 import { MONTHS_SHORT } from '../strings.js';
 import { countGoalAt, pauseGoalAt, periodStart, periodEnd } from './goals.js';
+import { pausedMask } from './pauses.js';
 
 const keyCache = new Map();
 export function dayNum(key) {
@@ -182,7 +183,8 @@ export function buildSeries({ daily, start, today, res, mode, unitDays = 1, raw 
       if (v != null) { sum += v; known++; }
     }
     let value;
-    if (mode === 'rate') value = raw ? sum : (b > a ? (sum / (b - a)) * unitDays : 0);
+    // Durch die *bekannten* Tage teilen: ausgesetzte Tage dürfen den Schnitt nicht verdünnen.
+    if (mode === 'rate') value = raw ? sum : (known ? (sum / known) * unitDays : null);
     else value = known ? sum / known : null;
     const gg = goalAt ? goalAt(a) : null;
     return {
@@ -205,7 +207,11 @@ export function buildSeries({ daily, start, today, res, mode, unitDays = 1, raw 
 // ---------- Kennzahlen ----------
 function windowAvg(daily, start, from, to) {
   let sum = 0, len = 0;
-  for (let d = Math.max(from, start); d <= to; d++) { sum += daily[d - start] || 0; len++; }
+  for (let d = Math.max(from, start); d <= to; d++) {
+    const v = daily[d - start];
+    if (v == null) continue; // ausgesetzt: zählt nicht mit
+    sum += v; len++;
+  }
   return { avg: len ? sum / len : null, len };
 }
 
@@ -221,8 +227,21 @@ export function countKpi(item, daily, start, today) {
     let m = periodStart('month', today);
     for (let i = 0; i < 6; i++) { m = periodStart('month', m - 1); months.push(m); }
     const firstM = periodStart('month', start);
-    const sumMonth = (ms) => { let s = 0; for (let d = ms, e = periodEnd('month', ms); d < e; d++) if (d >= start && d <= today) s += daily[d - start] || 0; return s; };
-    const avgOf = (list) => { const ok = list.filter((x) => x >= firstM); return { avg: ok.length ? ok.reduce((a, x) => a + sumMonth(x), 0) / ok.length : null, n: ok.length }; };
+    // Ein Monat mit ausgesetzten Tagen ist nicht vergleichbar und fällt ganz weg.
+    const sumMonth = (ms) => {
+      let s = 0;
+      for (let d = ms, e = periodEnd('month', ms); d < e; d++) {
+        if (d < start || d > today) continue;
+        const v = daily[d - start];
+        if (v == null) return null;
+        s += v;
+      }
+      return s;
+    };
+    const avgOf = (list) => {
+      const ok = list.filter((x) => x >= firstM).map(sumMonth).filter((x) => x != null);
+      return { avg: ok.length ? ok.reduce((a, x) => a + x, 0) / ok.length : null, n: ok.length };
+    };
     const cur = avgOf(months.slice(0, 3)), prev = avgOf(months.slice(3, 6));
     return { avg: cur.avg, prev: cur.avg != null && prev.n === 3 ? prev.avg : null };
   }
@@ -230,8 +249,15 @@ export function countKpi(item, daily, start, today) {
   const weeks = (fromMon, toMon) => {
     let sum = 0, n = 0;
     for (let m = Math.max(fromMon, firstMon); m <= toMon; m += 7) {
-      for (let d = m; d < m + 7; d++) if (d >= start && d <= today) sum += daily[d - start] || 0;
-      n++;
+      let w = 0, paused = false;
+      for (let d = m; d < m + 7; d++) {
+        if (d < start || d > today) continue;
+        const v = daily[d - start];
+        if (v == null) { paused = true; break; }
+        w += v;
+      }
+      if (paused) continue; // Woche mit ausgesetzten Tagen zählt nicht mit
+      sum += w; n++;
     }
     return { avg: n ? sum / n : null, n };
   };
@@ -240,11 +266,12 @@ export function countKpi(item, daily, start, today) {
   return { avg: cur.avg, prev: cur.avg != null && prev.n === 4 ? prev.avg : null };
 }
 
-export function pauseKpi(item, pauses, start, today) {
+export function pauseKpi(item, pauses, start, today, daily) {
   let reached = 0, total = 0, unknown = 0;
   for (let d = Math.max(today - 7, start); d <= today - 1; d++) {
     const goal = pauseGoalAt(item, d);
     if (goal == null) continue;
+    if (daily && daily[d - start] == null) continue; // ausgesetzt
     total++;
     const v = pauses[d - start];
     if (v == null) unknown++;
@@ -258,6 +285,9 @@ export function computeItemStats(item, r, today, now) {
   const start = Math.min(itemStart(item, r), today);
   const daily = new Array(today - start + 1).fill(0);
   for (const [d, c] of r.counts) if (d >= start && d <= today) daily[d - start] = c;
+  // Ausgesetzte Tage sind unbekannt, nicht null Einträge: sonst sähe eine Pause wie ein Erfolg aus.
+  const paused = pausedMask(item, start, today);
+  for (let i = 0; i < daily.length; i++) if (paused[i]) daily[i] = null;
   const hasPauseGoal = item.period === 'day' && item.pauseGoals.some((g) => g.minutes != null);
   const pauses = hasPauseGoal ? dailyPauses(r, start, today, now) : null;
   const timedCount = r.timed.length;
@@ -273,9 +303,9 @@ export function computeItemStats(item, r, today, now) {
     firstAvg = k ? s / k : null;
   }
   return {
-    start, daily, pauses, timedCount, timeStats, firstAvg,
+    start, daily, paused, pauses, timedCount, timeStats, firstAvg,
     kpi: countKpi(item, daily, start, today),
-    pauseKpi: pauses ? pauseKpi(item, pauses, start, today) : null,
+    pauseKpi: pauses ? pauseKpi(item, pauses, start, today, daily) : null,
     countGoalAt: (d) => countGoalAt(item, periodStart(item.period, d)),
     pauseGoalAt: (d) => pauseGoalAt(item, d),
   };

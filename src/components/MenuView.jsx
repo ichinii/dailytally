@@ -3,6 +3,7 @@ import { AppBar, Button, Card, Icon, ListRow, SaveStatus } from '../kladde/kladd
 import DragSheet from './DragSheet.jsx';
 import { exportFileName, exportText, parseImport } from '../lib/importExport.js';
 import { T, formatName, IMPORT_ERRORS } from '../strings.js';
+import { isPausedDay } from '../lib/pauses.js';
 
 let downloadsPromise = null;
 /** Download-Funktion der claude.ai-Vorschau, falls die App dort läuft; sonst null. */
@@ -149,7 +150,7 @@ function ImportSheet({ parsed, onConfirm, onClosed }) {
 }
 
 /** App-Menü: Export, Import, Alle Daten löschen – als Liste, damit später weitere Einträge dazukommen können. */
-export default function MenuView({ data, today, saveState, onReplaceAll, onDeleteAll, onToast }) {
+export default function MenuView({ data, today, saveState, onReplaceAll, onDeleteAll, onPauseAll, onResumeAll, onToast }) {
   const fileRef = useRef(null);
   const [sheet, setSheet] = useState(null); // 'export' | { import: parsed }
   const [error, setError] = useState('');
@@ -170,10 +171,26 @@ export default function MenuView({ data, today, saveState, onReplaceAll, onDelet
     reader.readAsText(f);
   };
 
+  const anyPausedToday = data.items.some((it) => isPausedDay(it, today));
+
   return (
     <>
       <AppBar title={T.menuTitle} mark markTint="mint" subtitle={T.menuSubtitle} />
       <div className="kl-view">
+        {data.items.length > 0 && (
+          <Card tint="paper" className="dt-menu">
+            <h3 className="kl-section-title dt-flat">{T.offSection}</h3>
+            <p className="dt-small kl-muted">{T.offAllText}</p>
+            <ul className="kl-list">
+              <li>
+                {anyPausedToday
+                  ? <ListRow leading="undo" leadTint="mint" title={T.offAllResume} onClick={onResumeAll} />
+                  : <ListRow leading="moon" leadTint="sky" title={T.offAllToday} onClick={onPauseAll} />}
+              </li>
+            </ul>
+          </Card>
+        )}
+
         <Card tint="paper" className="dt-menu">
           <div className="dt-menu__head">
             <h3 className="kl-section-title dt-flat">{T.dataSection}</h3>

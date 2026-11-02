@@ -10,6 +10,7 @@ import { loadData, saveData, emptyData, newId, requestPersistentStorage } from '
 import { buildIndex, dayNum, runningPause } from './lib/stats.js';
 import { dayOfTs, numToKey, mondayOf, formatClock, formatDuration, keyToNum } from './lib/days.js';
 import { periodStart, periodEnd, pauseGoalAt, gapGoalAt, applyCountGoal, applyMinutesGoal, countGoalAt } from './lib/goals.js';
+import { pauseDay, pauseOpen, pauseUntil, resume } from './lib/pauses.js';
 import { cssMs } from './lib/ui.js';
 import { T } from './strings.js';
 
@@ -237,6 +238,41 @@ export default function App() {
     showToast(T.imported);
   }, [checkDay, showToast]);
 
+  const onPauseItem = useCallback((id, { kind, until }) => {
+    const t = checkDay();
+    setData((d) => ({
+      ...d,
+      items: d.items.map((it) => {
+        if (it.id !== id) return it;
+        const pauses = kind === 'open' ? pauseOpen(it, t)
+          : kind === 'until' ? pauseUntil(it, t, keyToNum(until))
+          : pauseDay(it, t);
+        return { ...it, pauses };
+      }),
+    }));
+    const item = dataRef.current.items.find((i) => i.id === id);
+    if (item) showToast(T.offPausedItem(item.label), null, 'moon');
+  }, [checkDay, showToast]);
+
+  const onResumeItem = useCallback((id) => {
+    const t = checkDay();
+    setData((d) => ({ ...d, items: d.items.map((it) => (it.id === id ? { ...it, pauses: resume(it, t) } : it)) }));
+    const item = dataRef.current.items.find((i) => i.id === id);
+    if (item) showToast(T.offResumedItem(item.label), null, 'undo');
+  }, [checkDay, showToast]);
+
+  const onPauseAll = useCallback(() => {
+    const t = checkDay();
+    setData((d) => ({ ...d, items: d.items.map((it) => ({ ...it, pauses: pauseDay(it, t) })) }));
+    showToast(T.offAllDone, null, 'moon');
+  }, [checkDay, showToast]);
+
+  const onResumeAll = useCallback(() => {
+    const t = checkDay();
+    setData((d) => ({ ...d, items: d.items.map((it) => ({ ...it, pauses: resume(it, t) })) }));
+    showToast(T.offAllResumed, null, 'undo');
+  }, [checkDay, showToast]);
+
   const onDeleteAll = useCallback(() => {
     setData(emptyData());
     showToast(T.allDeleted, null, 'trash');
@@ -260,7 +296,8 @@ export default function App() {
     onOpenEntries: (itemId) => setEntriesSheet({ itemId, sel: selectedRef.current, focusEntryId: null }),
     onEdit: (itemId) => setItemSheet({ id: itemId }),
     onAdd: () => setItemSheet({ id: null }),
-  }), [onPlus, onMinus, onMoveItem]);
+    onResumeItem,
+  }), [onPlus, onMinus, onMoveItem, onResumeItem]);
 
   const earliestDay = useMemo(() => {
     let e = today;
@@ -321,7 +358,12 @@ export default function App() {
           )}
         </section>
         <section hidden={view !== 'menu'} data-view="menu">
-          <MenuView data={data} today={today} saveState={saveState} onReplaceAll={onReplaceAll} onDeleteAll={onDeleteAll} onToast={(t) => showToast(t)} />
+          <MenuView
+            data={data} today={today} saveState={saveState}
+            onReplaceAll={onReplaceAll} onDeleteAll={onDeleteAll}
+            onPauseAll={onPauseAll} onResumeAll={onResumeAll}
+            onToast={(t) => showToast(t)}
+          />
         </section>
       </main>
 
@@ -336,6 +378,7 @@ export default function App() {
           key={itemSheet.id || 'new'} item={editItem} today={today}
           entryCount={editItem ? (index.byItem.get(editItem.id) || { n: 0 }).n : 0}
           onCreate={onCreate} onUpdate={onUpdate} onDelete={onDeleteItem}
+          onPause={onPauseItem} onResume={onResumeItem}
           onClosed={() => setItemSheet(null)}
         />
       )}

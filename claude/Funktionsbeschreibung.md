@@ -179,6 +179,21 @@ Die Hauptansicht besteht aus einem wischbaren Wochenstreifen zur Tagesauswahl un
 - „Löschen“ im Zeitwähler (leere Uhrzeit) macht aus dem Eintrag wieder einen ohne Uhrzeit.
 - Pro Eintrag gibt es einen Löschknopf. Gelöschte Einträge lassen sich über den Toast „Rückgängig“ an ihrer alten Stelle wiederherstellen (solange das Item noch existiert).
 
+**Ausgesetzte Items**
+
+- Ist der gewählte Tag ausgesetzt, zeigt die Karte „ausgesetzt“ (bei Wochen- und Monats-Items mit nur teilweise ausgesetztem Zeitraum „teilweise ausgesetzt“), Plus und Minus sind gesperrt, Pausen- und Abstandszeile ruhen, und an der Stelle der Zielbewertung steht derselbe Hinweis.
+- Ist heute ausgesetzt und heute gewählt, bietet die Karte „Aussetzen beenden“ an – der Rückweg liegt immer auf der Karte, nicht nur im Sheet.
+- Gesetzt wird das Aussetzen im Item-Sheet im aufklappbaren Abschnitt **„Aussetzen“**: heute, unbefristet oder bis zu einem Datum. Der Abschnitt nennt zugeklappt den Zustand („läuft normal“, „ausgesetzt seit …“, „ausgesetzt bis …“) und listet die bisherigen Zeiträume.
+- Im App-Menü setzt „Heute alles aussetzen“ alle Items für heute aus; läuft irgendwo eine Pause, bietet dieselbe Zeile „Aussetzen überall beenden“ an.
+- „Beenden“ heißt: der heutige Tag zählt wieder. Ein Zeitraum, der dadurch leer würde (am selben Tag begonnen und beendet), verschwindet ganz; ein Beenden mitten in einem befristeten Zeitraum teilt ihn auf. Angrenzende Zeiträume verschmelzen zu einem.
+
+**Auswirkung auf Auswertungen**
+
+- Ausgesetzte Tage sind **unbekannt**, nicht null Einträge. Sie fallen aus Durchschnitten und dem Trend heraus; im Trend entsteht eine Lücke.
+- Durchschnitte pro Tag mitteln nur über die nicht ausgesetzten Tage. Bei Wochen- und Monats-Kennzahlen fällt ein Zeitraum, der ausgesetzte Tage enthält, **ganz** weg – eine Woche mit zwei fehlenden Tagen wäre nicht vergleichbar.
+- Ein Zeitraum mit ausgesetzten Tagen bekommt keine Zielbewertung.
+- Die Pausen-Kennzahl überspringt ausgesetzte Tage.
+
 **Mindestabstand** (jedes Item mit Mindestabstand, nur wenn heute gewählt ist)
 
 - Zeigt, wie lange bis zum nächsten Eintrag noch zu warten ist („Nächster Eintrag frühestens in 28 min“) mit Fortschritt zum Abstand; ist genug Zeit vergangen, steht „Abstand erfüllt“.
@@ -317,6 +332,14 @@ Erfüllt in Handy-Breite und im sandboxed iframe, ohne Fehler in der Konsole. `[
 - [x] „Weniger ist besser“ ohne Ziel zeigt groß die Zeit seit dem letzten Eintrag; ohne Eintrag mit Uhrzeit bleibt es beim Zähler.
 - [x] Plus legt auch bei „weniger ist besser“ einen Eintrag an, Minus entfernt ihn.
 - [x] Beim Anlegen wird die Richtung nur ohne Zählziel gefragt; „höchstens“ legt „weniger ist besser“ an.
+
+**Aussetzen**
+
+- [x] Ein heute ausgesetztes Item zeigt „ausgesetzt“, sperrt Plus und Minus, lässt Pausen- und Abstandszeile weg und gibt keine Zielbewertung.
+- [x] „Aussetzen beenden“ auf der Karte lässt heute wieder zählen; am selben Tag begonnen und beendet hinterlässt keinen Zeitraum.
+- [x] Im Sheet lässt sich bis zu einem Datum aussetzen; der Abschnitt nennt danach „ausgesetzt bis …“.
+- [x] Ein ausgesetzter Tag verdünnt den Tagesdurchschnitt nicht (6 Tage mit je 2 Einträgen und ein ausgesetzter Tag ergeben Ø 2/Tag, nicht Ø 1,7/Tag).
+- [x] „Heute alles aussetzen“ im Menü setzt alle Items aus; dieselbe Zeile beendet es überall wieder.
 
 **Mindestabstand**
 

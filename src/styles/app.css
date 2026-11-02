@@ -149,6 +149,14 @@ button { -webkit-tap-highlight-color: transparent; }
 .dt-fold__head .kl-icon { flex: none; color: var(--ink-muted); transition: transform var(--dur-fast, 140ms) ease; }
 .dt-fold__head[aria-expanded="true"] .kl-icon { transform: rotate(180deg); }
 .dt-fold__head:focus-visible { outline: 2px solid transparent; box-shadow: var(--focus-ring); border-radius: var(--kl-wobble-sm); }
+
+/* Ausgesetztes Item: Karte tritt zurück, bleibt aber lesbar */
+.dt-item--off .dt-counter__num, .dt-item--off .dt-item__name { opacity: .65; }
+.dt-off { display: grid; gap: 6px; }
+.dt-off__line { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
+.dt-off-actions { display: grid; gap: var(--space-2); justify-items: start; }
+.dt-off-actions .dt-row-field { width: 100%; }
+.dt-date { min-width: 150px; }
 .dt-goal { display: grid; gap: 6px; }
 .dt-goal__line, .dt-pause__line { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
 .dt-pause { display: grid; gap: 6px; }

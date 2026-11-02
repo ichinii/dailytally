@@ -1076,6 +1076,73 @@ def test_gap():
               fold.get_attribute('aria-expanded') == 'true' and '30 min' in fold.inner_text(), fold.inner_text())
         b.close()
 
+# ------------------------------------------------------------------ Aussetzen (Urlaub, Ausnahmen)
+def test_off():
+    with sync_playwright() as p:
+        b, ctx = new_ctx(p)
+        # Heute ausgesetzt: Karte sagt es, Zählen ist gesperrt, Rückweg ist da
+        d = data([item('z', 'Zigaretten', goals=[{'from': '2026-10-01', 'type': 'max', 'value': 8}])],
+                 entries_n('z', '2026-10-17', 3), version=4)
+        d['items'][0]['pauses'] = [{'from': '2026-10-17', 'to': None}]
+        pg = page(ctx, d, now=NOW, label='off')
+        c = card(pg, 'Zigaretten')
+        check('Ausgesetztes Item ist als solches erkennbar', c.locator('[data-testid=off]', has_text='ausgesetzt').count() == 1, c.inner_text())
+        check('Zählen ist gesperrt', c.get_by_role('button', name='Eintrag hinzufügen').is_disabled()
+              and c.get_by_role('button', name='Letzten Eintrag entfernen').is_disabled())
+        check('Keine Zielbewertung, solange ausgesetzt', c.locator('.kl-tag', has_text='überschritten').count() == 0)
+        check('Abstand und Pause ruhen', c.locator('[data-testid=gap]').count() == 0 and c.locator('[data-testid=pause]').count() == 0)
+        c.get_by_role('button', name='Aussetzen beenden').click(); pg.wait_for_timeout(400)
+        check('Beenden auf der Karte: läuft wieder', c.locator('[data-testid=off]').count() == 0
+              and not c.get_by_role('button', name='Eintrag hinzufügen').is_disabled())
+        check('Am selben Tag beendet heißt nie ausgesetzt', stored(pg)['items'][0]['pauses'] == [], stored(pg)['items'][0]['pauses'])
+        b.close()
+
+        # Im Sheet aussetzen: heute, unbefristet, bis Datum
+        b, ctx = new_ctx(p)
+        pg = page(ctx, data([item('z', 'Zigaretten')]), now=NOW, label='off2')
+        card(pg, 'Zigaretten').locator('.dt-item__name').click(); pg.wait_for_timeout(450)
+        fold = pg.locator('.dt-fold__head', has_text='Aussetzen')
+        check('Aussetzen-Abschnitt zugeklappt und beschriftet', fold.get_attribute('aria-expanded') == 'false' and 'läuft normal' in fold.inner_text(), fold.inner_text())
+        fold.click(); pg.wait_for_timeout(200)
+        pg.locator('#dt-off-until').fill('2026-10-20')
+        pg.get_by_test_id('off-until').click(); pg.wait_for_timeout(450)
+        check('Aussetzen bis Datum gespeichert', stored(pg)['items'][0]['pauses'] == [{'from': '2026-10-17', 'to': '2026-10-20'}], stored(pg)['items'][0]['pauses'])
+        check('Karte zeigt den Zustand', card(pg, 'Zigaretten').locator('[data-testid=off]').count() == 1)
+        # Ein Tag nach dem Ende zählt wieder
+        pg.get_by_role('button', name='Verlauf').click(); pg.wait_for_timeout(200)
+        pg.get_by_role('button', name='Zählen').click(); pg.wait_for_timeout(300)
+        card(pg, 'Zigaretten').locator('.dt-item__name').click(); pg.wait_for_timeout(450)
+        check('Kopfzeile nennt das Ende', 'ausgesetzt bis' in pg.locator('.dt-fold__head', has_text='Aussetzen').inner_text())
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(400)
+        b.close()
+
+        # Auswertung: ausgesetzter Tag zählt nicht als null
+        b, ctx = new_ctx(p)
+        entries = []
+        for day in ['2026-10-10', '2026-10-11', '2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15']:
+            entries += entries_n('z', day, 2, ts=ms(t(2026, 10, int(day[-2:]), 12, 0)))
+        d3 = data([item('z', 'Zigaretten', created='2026-10-01')], entries, version=4)
+        d3['items'][0]['pauses'] = [{'from': '2026-10-16', 'to': '2026-10-16'}]
+        pg = page(ctx, d3, now=NOW, label='off3')
+        pg.get_by_role('button', name='Verlauf').click(); pg.wait_for_timeout(600)
+        kpi = pg.locator('.dt-ov', has_text='Zigaretten').locator('[data-testid=kpi]').inner_text()
+        check('Ausgesetzter Tag verdünnt den Durchschnitt nicht (Ø 2/Tag)', 'Ø 2/Tag' in kpi, kpi)
+        b.close()
+
+        # App-weit aussetzen und wieder zurück
+        b, ctx = new_ctx(p)
+        pg = page(ctx, data([item('a', 'Eins'), item('b', 'Zwei', period='week')]), now=NOW, label='off4')
+        pg.get_by_role('button', name='Mehr').click(); pg.wait_for_timeout(300)
+        pg.get_by_role('button', name='Heute alles aussetzen').click(); pg.wait_for_timeout(400)
+        check('Alle Items ausgesetzt', all(len(it['pauses']) == 1 for it in stored(pg)['items']), stored(pg)['items'])
+        check('Die Zeile bietet jetzt das Beenden an', pg.get_by_role('button', name='Aussetzen überall beenden').count() == 1)
+        pg.get_by_role('button', name='Zählen').click(); pg.wait_for_timeout(300)
+        check('Beide Karten zeigen den Zustand', pg.locator('[data-testid=off]').count() == 2)
+        pg.get_by_role('button', name='Mehr').click(); pg.wait_for_timeout(300)
+        pg.get_by_role('button', name='Aussetzen überall beenden').click(); pg.wait_for_timeout(400)
+        check('Überall beendet', all(it['pauses'] == [] for it in stored(pg)['items']), stored(pg)['items'])
+        b.close()
+
 for name, fn in [('items', test_create_and_sheet), ('drag', test_sheet_drag), ('goals', test_goal_eval_and_history),
                  ('plus', test_plus_minus), ('strip', test_strip), ('times', test_day_boundary_and_times),
                  ('pauses', test_pauses), ('overview', test_overview), ('perf', test_overview_perf),
@@ -1084,7 +1151,8 @@ for name, fn in [('items', test_create_and_sheet), ('drag', test_sheet_drag), ('
                  ('r3strip', test_round3_strip_and_drop), ('r3scroll', test_round3_scroll), ('r3month', test_round3_month_and_import),
                  ('migrate', test_migration),
                  ('dir', test_direction),
-                 ('gap', test_gap)]:
+                 ('gap', test_gap),
+                 ('off', test_off)]:
     run(name, fn)
 
 print('\n==== ', sum(1 for r in RESULTS if r[1]), 'von', len(RESULTS), 'bestanden')
