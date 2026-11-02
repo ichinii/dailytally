@@ -25,6 +25,7 @@ Gespeichert werden einzelne Einträge mit festem Tag und optionaler Uhrzeit; all
 - **Item:** etwas, das gezählt wird. Hat einen Namen, einen Zeitraum (`day`, `week` oder `month`), ein Anlagedatum und optional ein Zählziel und ein Pausenziel. Die Reihenfolge der Items ist die Reihenfolge im Array `items` und lässt sich in der Track-Ansicht ändern.
 - **Eintrag:** ein einzelnes Vorkommen. Speichert immer den Tag (`day`) und, wenn bekannt, den genauen Zeitpunkt (`ts`, Millisekunden seit 1970 UTC). Unbekannte Uhrzeit = `null`, niemals 0.
 - **Zielverlauf:** Ziele werden nicht überschrieben, sondern als Liste mit Startdatum geführt (`from`). Für einen Zeitraum gilt der letzte Eintrag, dessen `from` am oder vor dem Beginn des Zeitraums liegt. `value: null` heißt „ab hier kein Ziel“. `from` ist immer ein Zeitraumbeginn: der Tag bei Tages-Items, der Montag bei Wochen-Items, der Monatserste bei Monats-Items.
+- **Datenformat-Version:** das Feld `version` sagt, nach welcher Fassung ein Datensatz aufgebaut ist. Es ist ein eigener Zähler, unabhängig von der Release-Nummer der App, und steigt höchstens einmal pro Release – oft gar nicht.
 - **Pausenziel-Verlauf:** gleiches Prinzip, mit `minutes` (z. B. 720 = 12 h) bzw. `null`. Nur Tages-Items haben Pausenziele; bei Wochen- und Monats-Items ist `pauseGoals` immer leer (der Import räumt das auf).
 
 ```json
@@ -57,6 +58,18 @@ Gespeichert werden einzelne Einträge mit festem Tag und optionaler Uhrzeit; all
   ]
 }
 ```
+
+### Migration beim Laden
+
+Alte Stände werden nicht verworfen, sondern gehoben. Die Migration ist eine Kette von Schritten (`src/lib/migrations.js`), die jeweils genau eine Version weiterschieben; beim Laden laufen alle fehlenden Schritte hintereinander, egal wie viele Releases dazwischen liegen. Je Release gibt es höchstens einen Schritt – genau den Sprung, den ein Nutzer tatsächlich macht. Datei-Import und Laden aus dem Speicher nehmen denselben Weg (`upgradeAny` in `src/lib/importExport.js`), deshalb können sich die beiden Pfade nicht auseinanderentwickeln.
+
+| Release | Datenformat-Version |
+| --- | --- |
+| 1.0 | 3 |
+
+Der Speicherschlüssel behält dauerhaft seinen historischen Namen `daily-tally-v3`: er ist nur ein Name, ein Umbenennen würde die Daten aller bestehenden Nutzer verwaisen lassen. Die Wahrheit über das Format steht im Feld `version`.
+
+Vor jeder Migration wird der alte Rohtext unverändert unter `daily-tally-v3-v<alte Version>-<Zeitstempel>` abgelegt, danach der gehobene Stand gespeichert. Daten aus einer **neueren** Version als der laufenden Code kennt (etwa ein alter, noch gecachter App-Stand) werden nie umgeformt: sie landen unter `daily-tally-v3-neuer-<Zeitstempel>`, die App startet leer, und der Auto-Save kann die Sicherung nicht mehr überschreiben. Die Prototyp-Formate (unversioniert, Erkennung über die Struktur) werden auf die älteste Kettenversion gehoben und laufen dann durch dieselbe Kette.
 
 Datumsrechnung läuft über Tagesnummern (Tage seit 1970, UTC-basiert), nicht über lokale `Date`-Objekte – das vermeidet Fehler bei der Sommerzeit-Umstellung. Nur `ts` ist ein echter Zeitpunkt und wird für die Anzeige in Ortszeit umgerechnet. Die 4-Uhr-Grenze ist an einer Stelle definiert (`src/lib/days.js`), Zeiträume ausschließlich über `periodStart`/`periodEnd` (`src/lib/goals.js`).
 
@@ -236,6 +249,7 @@ Die App ist eine statisch hostbare React-Single-Page-App (React 19 + Vite), mobi
 - Installierbare Web-App (PWA): Manifest und Service Worker, Start ohne Netz nach dem ersten Aufruf. Statisches Hosting über HTTPS (z. B. GitHub Pages).
 - Speicher: `localStorage`, Schlüssel `daily-tally-v3` (Anzeige-Einstellungen `daily-tally-ui`). Jeder Zugriff in `try/catch`. Ist der Speicher nicht verfügbar oder voll, erscheint ein sichtbarer Hinweis oben und die App bleibt bis zum Neuladen nutzbar. Beim Start dauerhaften Speicher anfordern (`navigator.storage.persist()`).
 - Unlesbare oder ungültige gespeicherte Daten werden nicht stillschweigend überschrieben, sondern unter `daily-tally-v3-defekt-<Zeitstempel>` zur Seite gelegt; die App startet leer.
+- Ein Stand aus einer älteren Datenformat-Version wird beim Laden migriert (siehe „Migration beim Laden“), der alte Rohtext vorher gesichert. Ein Stand aus einer neueren Version wird nie angefasst.
 - Alle visuellen Werte (Farben, Schriften, Abstände, Radien, Animationsdauern, Diagrammmaße) als zentrale Variablen, damit das Design austauschbar bleibt. Oberflächentexte zentral in `src/strings.js`.
 
 **Stolperfallen aus dem Prototyp**
@@ -312,6 +326,9 @@ Erfüllt in Handy-Breite und im sandboxed iframe, ohne Fehler in der Konsole. `[
 - [x] Import per eingefügtem Text funktioniert wie der Import per Datei.
 - [x] Eine ungültige Datei bzw. ein ungültiger Text ändert nichts und zeigt eine Meldung mit Grund.
 - [x] Ohne verfügbaren Speicher (iframe nur mit `allow-scripts`) läuft die App und zeigt einen Hinweis.
+- [x] Ein Stand im älteren Format im Speicher wird beim Laden migriert und sofort im aktuellen Format abgelegt; die Werte stimmen.
+- [x] Bei einer Migration liegt der alte Rohtext unverändert als Sicherung daneben.
+- [x] Ein Stand aus einer neueren Version wird nicht überschrieben: er liegt gesichert daneben und bleibt es auch nach dem Weiterzählen.
 - [x] Nach erstem Aufruf startet die App ohne Netz.
 
 ## Nicht enthalten und offen

@@ -1,9 +1,18 @@
 // Browser-Speicher. Jeder Zugriff in try/catch: in Sandboxes ohne allow-same-origin wirft schon der Zugriff.
-import { validateV3 } from './importExport.js';
+import { upgradeAny } from './importExport.js';
+import { DATA_VERSION } from './migrations.js';
 
+// Der Schlüssel behält seinen historischen Namen: er ist nur ein Name, ein
+// Umbenennen würde die Daten aller bestehenden Nutzer verwaisen lassen.
+// Die Wahrheit über das Format steht im Feld `version`.
 export const STORAGE_KEY = 'daily-tally-v3';
 
-export const emptyData = () => ({ version: 3, items: [], entries: [] });
+export const emptyData = () => ({ version: DATA_VERSION, items: [], entries: [] });
+
+/** Legt den Rohtext unangetastet zur Seite. Darf nie das Laden verhindern. */
+function backup(raw, why) {
+  try { window.localStorage.setItem(`${STORAGE_KEY}-${why}-${Date.now()}`, raw); } catch { /* egal */ }
+}
 
 /** → { data, available } */
 export function loadData() {
@@ -14,12 +23,23 @@ export function loadData() {
     return { data: emptyData(), available: false };
   }
   if (!raw) return { data: emptyData(), available: true };
+  let res;
   try {
-    const res = validateV3(JSON.parse(raw));
-    if (res.ok) return { data: res.data, available: true };
-  } catch { /* unten */ }
-  // Kaputte Daten nicht stillschweigend überschreiben: zur Seite legen.
-  try { window.localStorage.setItem(`${STORAGE_KEY}-defekt-${Date.now()}`, raw); } catch { /* egal */ }
+    res = upgradeAny(JSON.parse(raw));
+  } catch {
+    res = { ok: false };
+  }
+  if (res.ok) {
+    // Migrierter Stand: alten Rohtext sichern und gleich im neuen Format ablegen.
+    if (res.format !== `v${DATA_VERSION}`) {
+      backup(raw, res.format);
+      saveData(res.data);
+    }
+    return { data: res.data, available: true };
+  }
+  // Nicht stillschweigend überschreiben: zur Seite legen. Daten aus einer
+  // neueren Version landen unter `-neuer-`, damit der Auto-Save sie nicht frisst.
+  backup(raw, res.reason === 'future' ? 'neuer' : 'defekt');
   return { data: emptyData(), available: true };
 }
 

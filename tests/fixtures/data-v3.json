@@ -1,0 +1,29 @@
+{
+  "version": 3,
+  "items": [
+    {
+      "id": "c1",
+      "label": "Zigaretten",
+      "period": "day",
+      "createdDay": "2026-10-01",
+      "countGoals": [
+        { "from": "2026-10-01", "type": "max", "value": 10 },
+        { "from": "2026-11-01", "type": "max", "value": 8 }
+      ],
+      "pauseGoals": [{ "from": "2026-10-17", "minutes": 720 }]
+    },
+    {
+      "id": "s1",
+      "label": "Sport",
+      "period": "week",
+      "createdDay": "2026-10-01",
+      "countGoals": [{ "from": "2026-09-28", "type": "min", "value": 3 }],
+      "pauseGoals": []
+    }
+  ],
+  "entries": [
+    { "id": "e1", "itemId": "c1", "day": "2026-10-17", "ts": 1792224720000 },
+    { "id": "e2", "itemId": "c1", "day": "2026-10-16", "ts": null },
+    { "id": "e3", "itemId": "s1", "day": "2026-10-15", "ts": null }
+  ]
+}

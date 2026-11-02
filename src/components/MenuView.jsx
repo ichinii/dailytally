@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AppBar, Button, Card, Icon, ListRow, SaveStatus } from '../kladde/kladde.js';
 import DragSheet from './DragSheet.jsx';
 import { exportFileName, exportText, parseImport } from '../lib/importExport.js';
-import { T, FORMAT_NAMES, IMPORT_ERRORS } from '../strings.js';
+import { T, formatName, IMPORT_ERRORS } from '../strings.js';
 
 let downloadsPromise = null;
 /** Download-Funktion der claude.ai-Vorschau, falls die App dort läuft; sonst null. */
@@ -137,7 +137,7 @@ function ImportSheet({ parsed, onConfirm, onClosed }) {
       {(close) => (
         <>
           <p>{T.importAsk(parsed.data.items.length, parsed.data.entries.length)}</p>
-          <p className="dt-small kl-muted">{T.importFormat(FORMAT_NAMES[parsed.format])}</p>
+          <p className="dt-small kl-muted">{T.importFormat(formatName(parsed.format))}</p>
           <div className="dt-ask__buttons">
             <Button onClick={close}>{T.cancel}</Button>
             <Button variant="primary" icon="upload" onClick={() => { onConfirm(parsed.data); close(); }} data-testid="import-confirm">{T.importReplace}</Button>

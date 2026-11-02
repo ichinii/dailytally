@@ -1,5 +1,5 @@
 import os, json, time, datetime, traceback, sys
-os.environ['PLAYWRIGHT_BROWSERS_PATH'] = '/opt/pw-browsers'
+os.environ.setdefault('PLAYWRIGHT_BROWSERS_PATH', '/opt/pw-browsers')
 from playwright.sync_api import sync_playwright
 from zoneinfo import ZoneInfo
 
@@ -882,12 +882,63 @@ def test_round3_month_and_import():
         check('Import per Text ersetzt die Daten (inkl. Monats-Item aus Prototyp)', st['items'][0]['label'] == 'Kaffee' and st['items'][0]['period'] == 'month' and len(st['entries']) == 6)
         b.close()
 
+# ------------------------------------------------------------------ Migration beim Laden
+def test_migration():
+    keys = lambda pg: pg.evaluate("Object.keys(localStorage)")
+    raw = lambda pg, k: pg.evaluate("k => localStorage.getItem(k)", k)
+    # Jede Phase braucht einen eigenen Kontext: Seiten im selben Kontext teilen
+    # den localStorage, sonst zählen Sicherungsschlüssel der Vorphase mit.
+    with sync_playwright() as p:
+        # Version, die der Code gerade schreibt – aus der App selbst, ohne Annahme.
+        b, ctx = new_ctx(p)
+        pg = page(ctx, data=data([item('v', 'Version')]), now=NOW, label='version')
+        cur = stored(pg)['version']
+        b.close()
+
+        # Älteres Format im Speicher: wird beim Laden gehoben, Rohtext gesichert.
+        b, ctx = new_ctx(p)
+        proto = {'items': [{'id': 'k', 'label': 'Kaffee', 'period': 'day', 'createdDay': '2026-10-01'}],
+                 'counts': {'k': {'2026-10-16': 2, '2026-10-17': 3}}}
+        pg = page(ctx, data=proto, now=NOW, label='migrate')
+        st = stored(pg)
+        check('Alter Speicherstand wird migriert, nicht verworfen',
+              st and st['items'][0]['label'] == 'Kaffee' and len(st['entries']) == 5, st)
+        check('Migrierter Stand liegt im aktuellen Format', st and st['version'] == cur, st and st.get('version'))
+        check('Migrierte Daten sind sichtbar', value(pg, 'Kaffee') == 3)
+        bak = [k for k in keys(pg) if k.startswith('daily-tally-v3-v2-')]
+        check('Sicherungskopie des alten Stands vorhanden', len(bak) == 1, keys(pg))
+        check('Sicherungskopie ist der unveränderte Rohtext', len(bak) == 1 and json.loads(raw(pg, bak[0])) == proto)
+        b.close()
+
+        # Daten aus einer neueren Version: nie überschreiben.
+        b, ctx = new_ctx(p)
+        future = dict(data([item('f', 'Zukunft')]), version=cur + 900)
+        pg = page(ctx, data=future, now=NOW, label='future')
+        check('Zu neue Daten werden nicht angezeigt', pg.locator('article.dt-item').count() == 0)
+        pg.get_by_role('button', name='Erstes Item anlegen').click(); pg.wait_for_timeout(450)
+        pg.locator('#dt-name').fill('Neu')
+        pg.get_by_test_id('save').click(); pg.wait_for_timeout(450)
+        bak = [k for k in keys(pg) if k.startswith('daily-tally-v3-neuer-')]
+        check('Zu neue Daten liegen gesichert daneben', len(bak) == 1, keys(pg))
+        check('Sicherung bleibt nach dem Weiterzählen unversehrt',
+              len(bak) == 1 and json.loads(raw(pg, bak[0])) == future)
+        b.close()
+
+        # Kaputte Daten: bestehendes Verhalten.
+        b, ctx = new_ctx(p)
+        pg = page(ctx, data='{kein json', now=NOW, label='defekt')
+        bak = [k for k in keys(pg) if k.startswith('daily-tally-v3-defekt-')]
+        check('Kaputte Daten werden zur Seite gelegt, App startet leer',
+              len(bak) == 1 and pg.locator('article.dt-item').count() == 0, keys(pg))
+        b.close()
+
 for name, fn in [('items', test_create_and_sheet), ('drag', test_sheet_drag), ('goals', test_goal_eval_and_history),
                  ('plus', test_plus_minus), ('strip', test_strip), ('times', test_day_boundary_and_times),
                  ('pauses', test_pauses), ('overview', test_overview), ('perf', test_overview_perf),
                  ('export', test_export_import), ('iframes', test_iframes), ('offline', test_offline), ('theme', test_dark_and_layout),
                  ('counter', test_counter_stable), ('reorder', test_reorder), ('jump', test_today_jump_and_calendar), ('ov2', test_overview_v2),
-                 ('r3strip', test_round3_strip_and_drop), ('r3scroll', test_round3_scroll), ('r3month', test_round3_month_and_import)]:
+                 ('r3strip', test_round3_strip_and_drop), ('r3scroll', test_round3_scroll), ('r3month', test_round3_month_and_import),
+                 ('migrate', test_migration)]:
     run(name, fn)
 
 print('\n==== ', sum(1 for r in RESULTS if r[1]), 'von', len(RESULTS), 'bestanden')

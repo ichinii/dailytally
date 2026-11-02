@@ -1,11 +1,13 @@
-// Import (aktuelles Format v3 und die beiden Prototyp-Formate) und Export.
+// Import (aktuelles Format, ältere Formate über die Migrationskette und die
+// beiden Prototyp-Formate) und Export.
 import { isValidKey, keyToNum, numToKey, dayOfTs } from './days.js';
+import { BASE_VERSION, DATA_VERSION, stepUp } from './migrations.js';
 import { periodStart, PERIODS } from './goals.js';
 import { IMPORT_ERRORS } from '../strings.js';
 
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isPosInt = (v) => Number.isInteger(v) && v >= 1;
-const fail = (why) => ({ ok: false, error: IMPORT_ERRORS[why] });
+const fail = (why) => ({ ok: false, reason: why, error: IMPORT_ERRORS[why] });
 
 function cleanLabel(v) {
   if (typeof v !== 'string') return null;
@@ -38,8 +40,8 @@ function validPauseGoals(list) {
 }
 
 /** Prüft das aktuelle Format und liefert eine saubere Kopie. */
-export function validateV3(obj) {
-  if (!isObj(obj) || obj.version !== 3 || !Array.isArray(obj.items) || !Array.isArray(obj.entries)) return fail('format');
+export function validateCurrent(obj) {
+  if (!isObj(obj) || obj.version !== DATA_VERSION || !Array.isArray(obj.items) || !Array.isArray(obj.entries)) return fail('format');
   const items = [];
   const ids = new Set();
   for (const it of obj.items) {
@@ -59,7 +61,7 @@ export function validateV3(obj) {
     eids.add(e.id);
     entries.push({ id: e.id, itemId: e.itemId, day: e.day, ts: e.ts });
   }
-  return { ok: true, format: 'v3', data: { version: 3, items, entries } };
+  return { ok: true, format: `v${DATA_VERSION}`, data: { version: DATA_VERSION, items, entries } };
 }
 
 // ---------- Prototyp-Formate ----------
@@ -102,7 +104,7 @@ function convertV2(obj) {
     }
   }
   entries.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
-  return { ok: true, format: 'v2', data: { version: 3, items, entries } };
+  return { ok: true, format: 'v2', data: { version: BASE_VERSION, items, entries } };
 }
 
 function convertV1(obj) {
@@ -139,18 +141,37 @@ function convertV1(obj) {
     const c = createdNum ?? firstDay.get(id) ?? dayOfTs(Date.now());
     return { id, label, period, createdDay: numToKey(c), countGoals: protoGoals(src, period, c), pauseGoals: [] };
   });
-  return { ok: true, format: 'v1', data: { version: 3, items: out, entries } };
+  return { ok: true, format: 'v1', data: { version: BASE_VERSION, items: out, entries } };
+}
+
+/**
+ * Beliebiger gelesener Datensatz → aktuelles Format.
+ * Gemeinsamer Eingang für Datei-Import und Laden aus dem localStorage.
+ * `format` nennt die Herkunft (`v3`, `v4`, … bzw. `v1`/`v2` für Prototypen).
+ * → { ok, data, format } oder { ok:false, error }
+ */
+export function upgradeAny(obj) {
+  if (!isObj(obj)) return fail('format');
+  if (Number.isInteger(obj.version)) {
+    const up = stepUp(obj);
+    if (!up.ok) return fail(up.reason === 'future' ? 'future' : 'format');
+    const res = validateCurrent(up.data);
+    return res.ok ? { ...res, format: `v${up.from}` } : res;
+  }
+  // Prototyp-Formate: unversioniert, Erkennung über die Struktur.
+  const proto = isObj(obj.counts) ? convertV2(obj) : Array.isArray(obj.events) ? convertV1(obj) : fail('format');
+  if (!proto.ok) return proto;
+  const up = stepUp(proto.data);
+  if (!up.ok) return fail('format');
+  const res = validateCurrent(up.data);
+  return res.ok ? { ...res, format: proto.format } : res;
 }
 
 /** Text einer Importdatei → { ok, data, format } oder { ok:false, error } */
 export function parseImport(text) {
   let obj;
   try { obj = JSON.parse(text); } catch { return fail('json'); }
-  if (!isObj(obj)) return fail('format');
-  if (obj.version === 3) return validateV3(obj);
-  if (isObj(obj.counts)) return convertV2(obj);
-  if (Array.isArray(obj.events)) return convertV1(obj);
-  return fail('format');
+  return upgradeAny(obj);
 }
 
 export const exportText = (data) => JSON.stringify(data, null, 2);

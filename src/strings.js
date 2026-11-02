@@ -1,4 +1,6 @@
 // Alle Oberflächentexte an einer Stelle (Deutsch, du-Form).
+import { DATA_VERSION } from './lib/migrations.js';
+
 export const WEEKDAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 export const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 export const MONTHS_SHORT = ['Jan', 'Feb', 'März', 'Apr', 'Mai', 'Juni', 'Juli', 'Aug', 'Sept', 'Okt', 'Nov', 'Dez'];
@@ -214,6 +216,11 @@ export const IMPORT_ERRORS = {
   items: 'Die Items sind unvollständig oder fehlerhaft.',
   entries: 'Die Einträge sind unvollständig oder fehlerhaft.',
   read: 'Die Datei konnte nicht gelesen werden.',
+  future: 'Diese Datei kommt von einer neueren Version der App.',
 };
 
-export const FORMAT_NAMES = { v3: 'aktuelles Format', v2: 'Prototyp v2', v1: 'Prototyp v1' };
+export const FORMAT_NAMES = { v2: 'Prototyp v2', v1: 'Prototyp v1' };
+
+/** Name der Herkunft eines Imports; unbekannte ältere Formate inbegriffen. */
+export const formatName = (format) =>
+  format === `v${DATA_VERSION}` ? 'aktuelles Format' : (FORMAT_NAMES[format] ?? 'älteres Format');

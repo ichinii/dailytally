@@ -14,24 +14,44 @@ Mobile Web-App (PWA) zum Zählen, wie oft etwas pro Tag, Woche oder Monat passie
 npm install
 npm run dev            # Entwicklung
 npm run build          # dist/ (PWA)
-npm test               # Rechenlogik (Node, TZ=Europe/Berlin empfohlen)
+npm test               # Rechenlogik und Migration (Node, TZ=Europe/Berlin empfohlen)
 npm run tokens         # tokens.css aus tokens.json neu erzeugen
 node scripts/build-single.mjs [--pwa|--artifact]   # Build ohne Vite (esbuild)
 ```
 
-Browser-Abnahmetests (Python + Playwright, ~150 Prüfungen): siehe README, Abschnitt „Tests im Browser“. Nach Änderungen an Gesten, Wochenstreifen, Sheets oder Diagrammen laufen lassen.
+Browser-Abnahmetests (Python + Playwright, ~160 Prüfungen): siehe README, Abschnitt „Tests im Browser“. Nach Änderungen an Gesten, Wochenstreifen, Sheets oder Diagrammen laufen lassen.
 
 ## Commits
 
 - Keine Session-/Werbezeile in der Commit-Nachricht (kein „🤖 Generated with Claude Code“, kein Link auf die Session).
 - `Co-Authored-By: Claude ... <noreply@anthropic.com>` als letzte Zeile ist in Ordnung.
 
+## Releases
+
+Releases werden ausschließlich über annotierte Git-Tags markiert (`v1.0`, `v1.1`, …) und ausschließlich über Claude Code gesetzt – nie per Hand, damit kein Release unbemerkt durchrutscht. Die Datenformat-Version ist ein eigener Zähler und hat mit der Release-Nummer nichts zu tun.
+
+Checkliste, vollständig abzuarbeiten **vor** dem Tag:
+
+1. Arbeitsbaum sauber, auf `main`.
+2. `TZ=Europe/Berlin npm test` – grün (Rechenlogik und Migration).
+3. Browser-Abnahmetests nach README – grün.
+4. `npm run build` ohne Fehler.
+5. Bei geänderter Datenform: genau ein Migrationsschritt für dieses Release, mit `release`-Nummer und eigenem Test; Tabelle Release ↔ Datenformat in `claude/Funktionsbeschreibung.md` ergänzt.
+6. `claude/Funktionsbeschreibung.md` und `claude/Design.md` auf dem Stand des Codes.
+7. `package.json`-Version = Tag ohne `v`.
+8. `git tag -a vX.Y -m "Release X.Y"`.
+
+Schlägt ein Punkt fehl, wird nicht getaggt, sondern berichtet.
+
 ## Feste Regeln (aus dem Prototyp gelernt)
 
 - Datumsrechnung nur über Tagesnummern (`src/lib/days.js`), Tag beginnt um 04:00 – nur dort definiert. Zeiträume (Tag/Woche/Monat) nur über `periodStart`/`periodEnd` in `src/lib/goals.js`.
 - Unbekannte Uhrzeit = `ts: null`, nie erfundene Werte.
 - Kein `<form>`-Submit (in Sandbox-iframes blockiert). Speichern per Klick und Enter.
-- Jeder `localStorage`-Zugriff in try/catch. Datenformat `{ version: 3, items, entries }`, Schlüssel `daily-tally-v3`.
+- Jeder `localStorage`-Zugriff in try/catch. Datenformat `{ version, items, entries }`; die laufende Version ist `DATA_VERSION` in `src/lib/migrations.js`. Der Schlüssel bleibt dauerhaft `daily-tally-v3` – Umbenennen würde die Daten bestehender Nutzer verwaisen lassen.
+- Ändert sich die Datenform, gehört in dieselbe Änderung ein Migrationsschritt in `STEPS` (`src/lib/migrations.js`) **und** ein Test in `tests/migrations.test.mjs`. `DATA_VERSION` nie ohne Schritt erhöhen.
+- Höchstens ein Schritt pro Release: Im laufenden Release-Zyklus den offenen Schritt erweitern, keinen neuen anlegen. Ist ein Release getaggt, ist sein Schritt eingefroren. Hat das eigene Gerät ein Zwischenformat, wird es per Export/Import geradegezogen, nicht per Zusatzschritt.
+- Laden und Datei-Import gehen durch denselben Eingang (`upgradeAny` in `src/lib/importExport.js`); keinen zweiten Pfad aufbauen.
 - Keine blockierenden Touch-/Wheel-Listener (sonst stockt das Scrollen). Umsortieren sperrt das Scrollen erst nach dem Anheben.
 - Wochenstreifen: harte Sprünge über `jumpTo` (frisches Scroll-Element), nie nur `scrollLeft` setzen – Chrome rastet sonst zur alten Woche zurück.
 - Diagramme: zentrierter gleitender Durchschnitt, Achsen nur ganze Zahlen bzw. volle Stunden, keine Balken im Trend.
