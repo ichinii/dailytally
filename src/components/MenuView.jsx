@@ -4,6 +4,21 @@ import DragSheet from './DragSheet.jsx';
 import { exportFileName, exportText, parseImport } from '../lib/importExport.js';
 import { T, formatName, IMPORT_ERRORS } from '../strings.js';
 import { isPausedDay } from '../lib/pauses.js';
+import { DATA_VERSION } from '../lib/migrations.js';
+
+const COFFEE_URL = 'https://buymeacoffee.com/svenerdem';
+const ISSUES_URL = 'https://github.com/ichinii/dailytally/issues';
+/** Build-Zeit-Version aus package.json; 1.1.0 wird als 1.1 gezeigt, passend zum Tag v1.1. */
+const appVersion = (typeof __VERSION__ === 'string' ? __VERSION__ : '0').replace(/\.0$/, '');
+
+/** Externer Link: eigener Tab, damit die installierte App nicht wegnavigiert. */
+function openExternal(url) {
+  try {
+    const w = window.open(url, '_blank', 'noopener,noreferrer');
+    if (w) return;
+  } catch { /* unten */ }
+  try { window.location.href = url; } catch { /* nicht möglich */ }
+}
 
 let downloadsPromise = null;
 /** Download-Funktion der claude.ai-Vorschau, falls die App dort läuft; sonst null. */
@@ -203,6 +218,19 @@ export default function MenuView({ data, today, saveState, onReplaceAll, onDelet
             <li><ListRow leading="trash" leadTint="peach" title={T.deleteAllRow} meta={T.deleteAllMeta} onClick={() => setConfirmAll(true)} /></li>
           </ul>
           <input ref={fileRef} id="dt-import-file" type="file" accept="application/json,.json,text/plain" hidden onChange={onFile} data-testid="import-file" />
+        </Card>
+
+        <Card tint="paper" className="dt-menu">
+          <h3 className="kl-section-title dt-flat">{T.aboutSection}</h3>
+          <ul className="kl-list">
+            <li><ListRow leading="sparkle" leadTint="butter" title={T.versionRow(appVersion)} meta={T.versionMeta(DATA_VERSION)} /></li>
+            <li><ListRow leading="alert" leadTint="peach" title={T.issuesRow} meta={T.issuesMeta} onClick={() => openExternal(ISSUES_URL)} /></li>
+          </ul>
+          <p className="dt-small kl-muted">{T.coffeeText}</p>
+          {/* Markenknopf: bewusst in den Farben von Buy me a coffee, siehe Design.md */}
+          <button type="button" className="dt-coffee" onClick={() => openExternal(COFFEE_URL)}>
+            <span aria-hidden="true">☕</span> {T.coffeeTitle}
+          </button>
         </Card>
 
         {error && (

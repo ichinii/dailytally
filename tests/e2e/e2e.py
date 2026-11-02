@@ -1,4 +1,4 @@
-import os, json, time, datetime, traceback, sys
+import os, re, json, time, datetime, traceback, sys
 os.environ.setdefault('PLAYWRIGHT_BROWSERS_PATH', '/opt/pw-browsers')
 from playwright.sync_api import sync_playwright
 from zoneinfo import ZoneInfo
@@ -1143,6 +1143,25 @@ def test_off():
         check('Überall beendet', all(it['pauses'] == [] for it in stored(pg)['items']), stored(pg)['items'])
         b.close()
 
+# ------------------------------------------------------------------ Abschnitt „Über“
+def test_about():
+    with sync_playwright() as p:
+        b, ctx = new_ctx(p)
+        pg = page(ctx, data([item('a', 'Eins')]), now=NOW, label='about')
+        pg.get_by_role('button', name='Mehr').click(); pg.wait_for_timeout(300)
+        txt = pg.locator('.dt-menu', has_text='Über Daily Tally').inner_text()
+        check('Version und Datenformat stehen im Menü', re.search(r'Version \d+\.\d+', txt) and re.search(r'Datenformat \d+', txt), txt)
+        # Externe Ziele: Adresse prüfen, ohne wirklich ins Netz zu gehen
+        opened = []
+        pg.expose_function('__opened', lambda u: opened.append(u))
+        pg.evaluate("() => { window.open = (u) => { window.__opened(u); return {}; }; }")
+        pg.get_by_role('button', name='Problem melden').click(); pg.wait_for_timeout(200)
+        pg.get_by_role('button', name='Buy me a coffee').click(); pg.wait_for_timeout(200)
+        check('Problem melden führt zu den GitHub-Issues', 'https://github.com/ichinii/dailytally/issues' in opened, opened)
+        check('Kaffee-Knopf führt zu buymeacoffee', 'https://buymeacoffee.com/svenerdem' in opened, opened)
+        check('Die App navigiert nicht selbst weg', pg.url.endswith('index.html'), pg.url)
+        b.close()
+
 for name, fn in [('items', test_create_and_sheet), ('drag', test_sheet_drag), ('goals', test_goal_eval_and_history),
                  ('plus', test_plus_minus), ('strip', test_strip), ('times', test_day_boundary_and_times),
                  ('pauses', test_pauses), ('overview', test_overview), ('perf', test_overview_perf),
@@ -1152,7 +1171,8 @@ for name, fn in [('items', test_create_and_sheet), ('drag', test_sheet_drag), ('
                  ('migrate', test_migration),
                  ('dir', test_direction),
                  ('gap', test_gap),
-                 ('off', test_off)]:
+                 ('off', test_off),
+                 ('about', test_about)]:
     run(name, fn)
 
 print('\n==== ', sum(1 for r in RESULTS if r[1]), 'von', len(RESULTS), 'bestanden')

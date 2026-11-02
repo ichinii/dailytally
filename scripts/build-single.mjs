@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, basename } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const pwa = process.argv.includes('--pwa');
 const artifact = process.argv.includes('--artifact');
 const outdir = join(root, pwa ? 'dist-pwa' : 'dist-single');
@@ -20,7 +21,7 @@ const res = await build({
   jsx: 'automatic', outdir: join(outdir, 'assets'),
   entryNames: pwa ? 'app-[hash]' : 'app', assetNames: '[name]-[hash]',
   loader: { '.woff': pwa ? 'file' : 'dataurl', '.js': 'jsx' },
-  define: { 'process.env.NODE_ENV': '"production"', __PWA__: pwa ? 'true' : 'false' },
+  define: { 'process.env.NODE_ENV': '"production"', __PWA__: pwa ? 'true' : 'false', __VERSION__: JSON.stringify(pkg.version) },
   publicPath: '.', // relativ zur CSS-Datei in assets/
   legalComments: 'none',
 });

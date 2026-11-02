@@ -104,6 +104,15 @@ export const T = {
   offAllResumed: 'Alle Items laufen wieder',
   offAllText: 'Für Urlaub oder Auszeiten: heute zählt nichts mit. Einzeln lässt sich das pro Item ändern.',
 
+  // Über die App
+  aboutSection: 'Über Daily Tally',
+  versionRow: (v) => `Version ${v}`,
+  versionMeta: (data) => `Datenformat ${data}`,
+  coffeeTitle: 'Buy me a coffee',
+  coffeeText: 'Daily Tally ist kostenlos und ohne Werbung. Wenn sie dir hilft, freue ich mich über einen Kaffee.',
+  issuesRow: 'Problem melden',
+  issuesMeta: 'Öffnet die Fehlerliste auf GitHub',
+
   // Toasts
   captured: (time) => `Erfasst ${time}`,
   pauseEnded: (dur) => `Pause beendet: ${dur}`,

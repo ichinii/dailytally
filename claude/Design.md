@@ -56,6 +56,7 @@ Die sieben Pastelltöne: rose, lilac, butter, mint, sky, peach, aqua.
 - Text fast immer `ink`. `ink-muted` nur auf `paper`, `paper-raised` und `tint-*`, nie auf `mark-*` oder `sticky`.
 - Status nie nur über Farbe, sondern immer mit Wort und Icon: Häkchen für success, Warndreieck für danger, Uhr für „noch offen“.
 - Keine Verläufe, keine farbigen Ränder links an Karten, keine Glas-Effekte, keine Schatten auf Karten.
+- **Eine Ausnahme von der Palette:** der Buy-me-a-coffee-Knopf im Menü trägt die Markenfarbe des Dienstes (`#ffdd00` mit dunkler Schrift), weil er nur in dieser Farbe als das erkannt wird, was er ist. Form, Schrift und Radien bleiben Kladde. Weitere Marken-Elemente brauchen denselben ausdrücklichen Grund – sonst gilt die Palette.
 
 ---
 
@@ -240,6 +241,12 @@ Icon, Mark, Button (primary · secondary · ghost · danger · fab), Card, Check
 - Die Liste ist so angelegt, dass weitere Zeilen dazukommen können.
 - **Export-Sheet:** zwei gleichwertige Wege, „Datei speichern“ (primary) und „Kopieren“ (secondary). Darunter leise „Als Text anzeigen“: markierbares Monospace-Feld, falls Download und Zwischenablage blockiert sind.
 - **Import-Sheet:** „Datei wählen“ (primary, volle Breite) oder „Oder Text einfügen“ (Textfeld, Monospace) plus „Text prüfen“. Danach folgt immer eine Nachfrage mit Zahlen („… durch 5 Items und 1 234 Einträge ersetzen?“) und dem erkannten Format.
+
+### 9.11a Abschnitt „Über“ im Menü
+
+- Eigene `paper`-Karte unter den Daten-Abschnitten: `kl-list` mit „Version 1.1“ (butter, sparkle; Meta nennt das Datenformat) und „Problem melden“ (peach, alert, führt zu GitHub). Die Versionszeile ist keine Aktion und hat deshalb keinen Pfeil.
+- Darunter ein Satz, dass die App kostenlos und ohne Werbung ist, dann der Buy-me-a-coffee-Knopf in Markenfarbe (siehe Regeln unter „Farben“).
+- Externe Ziele öffnen in einem eigenen Tab, damit die installierte App nicht aus sich heraus wegnavigiert.
 
 ### 9.12 Speicherstatus
 
