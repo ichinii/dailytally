@@ -12,6 +12,14 @@ RESULTS = []
 CONSOLE = []
 ONLY = sys.argv[1:]
 
+WEEKDAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+MONTHS_SHORT = ['Jan', 'Feb', 'März', 'Apr', 'Mai', 'Juni', 'Juli', 'Aug', 'Sept', 'Okt', 'Nov', 'Dez']
+
+def day_label(dt):
+    """Beschriftung eines Tages wie in der App („Sa, 17. Okt“), mit 4-Uhr-Grenze."""
+    d = dt.date() - datetime.timedelta(days=1) if dt.hour < 4 else dt.date()
+    return f'{WEEKDAYS_SHORT[d.weekday()]}, {d.day}. {MONTHS_SHORT[d.month - 1]}'
+
 def t(y, m, d, h=12, mi=0):
     return datetime.datetime(y, m, d, h, mi, tzinfo=TZ)
 def ms(dt):
@@ -147,7 +155,8 @@ def test_sheet_drag():
         ok = True; samples = []
         for dy in [20, 57, 103, 140]:
             cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': gx, 'y': gy + dy}]})
-            pg.wait_for_timeout(30)
+            # Langsam ziehen: über 0.5 px/ms wäre es ein Wisch und würde schließen.
+            pg.wait_for_timeout(140)
             y = sheet_y(pg); samples.append((dy, y))
             ok = ok and abs(y - dy) < 0.6
         focused = pg.evaluate("document.activeElement && document.activeElement.id")
@@ -447,7 +456,10 @@ def test_overview():
         bb = trend.locator('.dt-chart__plot').bounding_box()
         trend.locator('.dt-chart__plot').click(position={'x': bb['width'] - 10, 'y': 50}); pg.wait_for_timeout(100)
         info = trend.locator('.dt-chart__info').inner_text()
-        check('Punkt antippen zeigt Zeitraum, Wert und Ziel', 'Sa, 17. Okt' in info and 'vorläufig' in info and 'Ziel: höchstens 8' in info, info)
+        # Diese Gruppe läuft ohne feste Uhr auf frisch erzeugten Testdaten,
+        # der letzte Punkt ist also der echte heutige Tag.
+        heute = day_label(datetime.datetime.now(TZ))
+        check('Punkt antippen zeigt Zeitraum, Wert und Ziel', heute in info and 'vorläufig' in info and 'Ziel: höchstens 8' in info, (info, heute))
         b.close()
 
 def test_overview_perf():
