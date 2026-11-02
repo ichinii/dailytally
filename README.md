@@ -28,7 +28,10 @@ git push origin v1.1          # testet und veröffentlicht
 
 Ein manueller Lauf über „Run workflow“ veröffentlicht nur, wenn er auf einem Tag gestartet wird; von `main` aus bleibt er ein Testlauf.
 
-Voraussetzung im Repo: Settings → Pages → Source „GitHub Actions“. Steht das nicht, läuft `build` grün durch und `deploy` schlägt fehl, ohne dass sich an der Website etwas ändert.
+Zwei Voraussetzungen im Repo, beide einmalig:
+
+1. Settings → Pages → Source „GitHub Actions“. Fehlt das, läuft `build` grün durch und `deploy` schlägt fehl, ohne dass sich an der Website etwas ändert.
+2. Settings → Environments → `github-pages` → „Deployment branches and tags“ → eine Regel für Tags mit dem Muster `v*`. Ohne sie lehnt die Umgebung den Deploy ab: *„Tag … is not allowed to deploy to github-pages due to environment protection rules“* – die Voreinstellung erlaubt nur den Standard-Branch.
 
 Die Adresse ist die Project-Pages-Adresse dieses Repos (`https://<user>.github.io/<repo>/`) und kommt ohne Kopieren zustande. Sie darf nicht gleichzeitig aus einem Ordner `dailytally/` im User-Site-Repo `ichinii.github.io` bedient werden – zwei Quellen für eine Adresse.
 

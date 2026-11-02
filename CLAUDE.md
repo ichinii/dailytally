@@ -31,7 +31,7 @@ Browser-Abnahmetests (Python + Playwright, ~160 Prüfungen): siehe README, Absch
 
 Releases werden ausschließlich über annotierte Git-Tags markiert (`v1.0`, `v1.1`, …) und ausschließlich über Claude Code gesetzt – nie per Hand, damit kein Release unbemerkt durchrutscht. Die Datenformat-Version ist ein eigener Zähler und hat mit der Release-Nummer nichts zu tun.
 
-**Der Tag ist die Veröffentlichung.** Ein Push auf `main` testet nur; erst der Push des Tags deployt auf GitHub Pages (siehe README, „Veröffentlichen“). Arbeitsstände dürfen also nach `main`, ohne bei Nutzern zu landen.
+**Der Tag ist die Veröffentlichung.** Ein Push auf `main` testet nur; erst der Push des Tags deployt auf GitHub Pages (siehe README, „Veröffentlichen“, dort auch die beiden einmaligen Repo-Einstellungen). Arbeitsstände dürfen also nach `main`, ohne bei Nutzern zu landen.
 
 Checkliste, vollständig abzuarbeiten **vor** dem Tag:
 
