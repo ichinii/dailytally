@@ -941,6 +941,28 @@ def test_migration():
         check('Sicherungskopie ist der unveränderte Rohtext', len(bak) == 1 and json.loads(raw(pg, bak[0])) == proto)
         b.close()
 
+        # Der Weg echter Nutzer: 1.0-Stand (Datenformat 3) wird auf 4 gehoben.
+        b, ctx = new_ctx(p)
+        v3 = {'version': 3, 'items': [
+            {'id': 'c1', 'label': 'Zigaretten', 'period': 'day', 'createdDay': '2026-10-01',
+             'countGoals': [{'from': '2026-10-01', 'type': 'max', 'value': 8}],
+             'pauseGoals': [{'from': '2026-10-01', 'minutes': 720}]}],
+            'entries': [{'id': 'e1', 'itemId': 'c1', 'day': '2026-10-17', 'ts': ms(t(2026, 10, 17, 12, 0))},
+                        {'id': 'e2', 'itemId': 'c1', 'day': '2026-10-16', 'ts': None}]}
+        pg = page(ctx, v3, now=NOW, label='v3')
+        st = stored(pg)
+        it = st['items'][0]
+        check('1.0-Stand wird auf das aktuelle Format gehoben', st['version'] == cur, st['version'])
+        check('Ziele und Einträge bleiben unverändert',
+              it['countGoals'] == [{'from': '2026-10-01', 'type': 'max', 'value': 8}]
+              and it['pauseGoals'] == [{'from': '2026-10-01', 'minutes': 720}]
+              and len(st['entries']) == 2, it)
+        check('Neue Felder kommen leer dazu', it['gapGoals'] == [] and it['pauses'] == [], it)
+        check('Sicherungskopie des 1.0-Stands liegt daneben',
+              len([k for k in keys(pg) if k.startswith('daily-tally-v3-v3-')]) == 1, keys(pg))
+        check('Die Daten sind nach der Migration sichtbar', value(pg, 'Zigaretten') == 1)
+        b.close()
+
         # Daten aus einer neueren Version: nie überschreiben.
         b, ctx = new_ctx(p)
         future = dict(data([item('f', 'Zukunft')]), version=cur + 900)
