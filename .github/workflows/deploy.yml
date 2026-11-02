@@ -1,20 +1,18 @@
-# Baut die App bei jedem Push auf main und veröffentlicht sie auf GitHub Pages.
+# Testet jeden Push auf main und veröffentlicht auf GitHub Pages, sobald ein
+# Release-Tag (v*) gepusht wird. main ist damit Arbeitsstand, nicht Produktion.
 # Einmalig im Repo: Settings → Pages → Source: „GitHub Actions“.
-name: Deploy
+name: Test und Release
 
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
   build:
@@ -29,13 +27,21 @@ jobs:
         env:
           TZ: Europe/Berlin
       - run: npm run build
+      # Nur für ein Release hochladen; auf main bleibt es ein reiner Testlauf.
       - uses: actions/upload-pages-artifact@v3
+        if: startsWith(github.ref, 'refs/tags/v')
         with:
           path: dist
 
   deploy:
     needs: build
+    # Greift beim Tag-Push und bei einem manuellen Lauf auf einem Tag.
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    # Nicht abbrechen: ein laufender Deploy soll fertig werden.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

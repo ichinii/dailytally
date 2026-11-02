@@ -31,6 +31,8 @@ Browser-Abnahmetests (Python + Playwright, ~160 Prüfungen): siehe README, Absch
 
 Releases werden ausschließlich über annotierte Git-Tags markiert (`v1.0`, `v1.1`, …) und ausschließlich über Claude Code gesetzt – nie per Hand, damit kein Release unbemerkt durchrutscht. Die Datenformat-Version ist ein eigener Zähler und hat mit der Release-Nummer nichts zu tun.
 
+**Der Tag ist die Veröffentlichung.** Ein Push auf `main` testet nur; erst der Push des Tags deployt auf GitHub Pages (siehe README, „Veröffentlichen“). Arbeitsstände dürfen also nach `main`, ohne bei Nutzern zu landen.
+
 Checkliste, vollständig abzuarbeiten **vor** dem Tag:
 
 1. Arbeitsbaum sauber, auf `main`.
@@ -42,7 +44,7 @@ Checkliste, vollständig abzuarbeiten **vor** dem Tag:
    `CHANGELOG.md`: Abschnitt „Unveröffentlicht“ in einen Release-Abschnitt mit Datum umbenennen, neuen leeren anlegen.
 7. `package.json`-Version = Tag ohne `v`.
 8. `git tag -a vX.Y -m "Release X.Y"`.
-9. `git push origin main --follow-tags`, danach den Workflow-Lauf prüfen: erst wenn `deploy` grün ist, ist das Release draußen (siehe README, „Veröffentlichen“).
+9. `git push origin main` (Testlauf), dann `git push origin vX.Y` – erst dieser Push veröffentlicht. Danach den Lauf prüfen: erst wenn `deploy` grün ist, ist das Release draußen.
 
 Schlägt ein Punkt fehl, wird nicht getaggt, sondern berichtet.
 

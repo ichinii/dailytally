@@ -16,7 +16,17 @@ npm test           # Rechenlogik (Tagesgrenze, Ziele, Pausen, Import) und Migrat
 
 ## Veröffentlichen
 
-Live unter <https://ichinii.github.io/dailytally/>. Jeder Push auf `main` startet `.github/workflows/deploy.yml`: bauen, `npm test`, `dist/` als Pages-Artefakt, veröffentlichen. Der `deploy`-Job hängt am `build`-Job – rote Tests heißen also kein Deploy, der alte Stand bleibt online. Der Release-Tag selbst löst nichts aus.
+Live unter <https://ichinii.github.io/dailytally/>. Zwei getrennte Dinge:
+
+- **Push auf `main`** startet `.github/workflows/deploy.yml` als reinen Testlauf: bauen und `npm test`. Veröffentlicht wird nichts. `main` ist Arbeitsstand, nicht Produktion.
+- **Push eines Tags `v*`** läuft dieselben Tests und veröffentlicht danach `dist/` auf GitHub Pages. Der `deploy`-Job hängt am `build`-Job – rote Tests heißen also kein Deploy, der alte Stand bleibt online.
+
+```bash
+git push origin main          # testet
+git push origin v1.1          # testet und veröffentlicht
+```
+
+Ein manueller Lauf über „Run workflow“ veröffentlicht nur, wenn er auf einem Tag gestartet wird; von `main` aus bleibt er ein Testlauf.
 
 Voraussetzung im Repo: Settings → Pages → Source „GitHub Actions“. Steht das nicht, läuft `build` grün durch und `deploy` schlägt fehl, ohne dass sich an der Website etwas ändert.
 
