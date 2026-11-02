@@ -12,7 +12,15 @@ npm run preview    # dist/ lokal ansehen
 npm test           # Rechenlogik (Tagesgrenze, Ziele, Pausen, Import) und Migration
 ```
 
-`base: './'` in `vite.config.js` – `dist/` läuft auch in einem Unterordner, z. B. auf GitHub Pages (`https://<name>.github.io/daily-tally/`). Offline-Start braucht HTTPS (GitHub Pages hat das).
+`base: './'` in `vite.config.js` – `dist/` läuft auch in einem Unterordner, z. B. auf GitHub Pages. Offline-Start braucht HTTPS (GitHub Pages hat das).
+
+## Veröffentlichen
+
+Live unter <https://ichinii.github.io/dailytally/>. Jeder Push auf `main` startet `.github/workflows/deploy.yml`: bauen, `npm test`, `dist/` als Pages-Artefakt, veröffentlichen. Der `deploy`-Job hängt am `build`-Job – rote Tests heißen also kein Deploy, der alte Stand bleibt online. Der Release-Tag selbst löst nichts aus.
+
+Voraussetzung im Repo: Settings → Pages → Source „GitHub Actions“. Steht das nicht, läuft `build` grün durch und `deploy` schlägt fehl, ohne dass sich an der Website etwas ändert.
+
+Die Adresse ist die Project-Pages-Adresse dieses Repos (`https://<user>.github.io/<repo>/`) und kommt ohne Kopieren zustande. Sie darf nicht gleichzeitig aus einem Ordner `dailytally/` im User-Site-Repo `ichinii.github.io` bedient werden – zwei Quellen für eine Adresse.
 
 Ohne Vite geht es auch mit dem mitgelieferten esbuild:
 

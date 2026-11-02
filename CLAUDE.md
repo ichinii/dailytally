@@ -40,6 +40,7 @@ Checkliste, vollständig abzuarbeiten **vor** dem Tag:
 6. `claude/Funktionsbeschreibung.md` und `claude/Design.md` auf dem Stand des Codes.
 7. `package.json`-Version = Tag ohne `v`.
 8. `git tag -a vX.Y -m "Release X.Y"`.
+9. `git push origin main --follow-tags`, danach den Workflow-Lauf prüfen: erst wenn `deploy` grün ist, ist das Release draußen (siehe README, „Veröffentlichen“).
 
 Schlägt ein Punkt fehl, wird nicht getaggt, sondern berichtet.
 
