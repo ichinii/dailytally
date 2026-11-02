@@ -27,9 +27,18 @@ export function countGoalAt(item, startNum) {
   return g && g.value != null ? { type: g.type, value: g.value } : null;
 }
 
-export function pauseGoalAt(item, startNum) {
-  const g = entryAt(item.pauseGoals, startNum);
+/** Minuten-Ziel (Pausenziel oder Mindestabstand), das für einen Zeitraum gilt. */
+export function minutesGoalAt(list, startNum) {
+  const g = entryAt(list, startNum);
   return g && g.minutes != null ? g.minutes : null;
+}
+
+export function pauseGoalAt(item, startNum) {
+  return minutesGoalAt(item.pauseGoals, startNum);
+}
+
+export function gapGoalAt(item, startNum) {
+  return minutesGoalAt(item.gapGoals, startNum);
 }
 
 /**
@@ -52,6 +61,9 @@ export function countGoalChanged(item, startNum, next) {
 export function pauseGoalChanged(item, startNum, nextMinutes) {
   return (pauseGoalAt(item, startNum) ?? null) !== (nextMinutes ?? null);
 }
+export function gapGoalChanged(item, startNum, nextMinutes) {
+  return (gapGoalAt(item, startNum) ?? null) !== (nextMinutes ?? null);
+}
 
 const sortByFrom = (list) => list.slice().sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : 0));
 
@@ -67,7 +79,7 @@ export function applyCountGoal(list, mode, fromNum, createdStartNum, next) {
   return sortByFrom([...list.filter((g) => g.from !== key), entry(fromNum)]);
 }
 
-export function applyPauseGoal(list, mode, fromNum, createdStartNum, nextMinutes) {
+export function applyMinutesGoal(list, mode, fromNum, createdStartNum, nextMinutes) {
   const entry = (from) => ({ from: numToKey(from), minutes: nextMinutes ?? null });
   if (mode === 'fix') return nextMinutes != null ? [entry(createdStartNum)] : [];
   if (nextMinutes == null && list.length === 0) return [];

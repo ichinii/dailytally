@@ -3,7 +3,7 @@ import { Button, Card, Icon, Mark, Tag } from '../kladde/kladde.js';
 import Bar from './Bar.jsx';
 import { evaluate } from '../lib/goals.js';
 import { formatDuration } from '../lib/days.js';
-import { runningPause } from '../lib/stats.js';
+import { gapBreaks, runningPause } from '../lib/stats.js';
 import { useNow } from '../lib/ui.js';
 import { T } from '../strings.js';
 
@@ -74,7 +74,31 @@ function heroLabel(item, value, goal, r, today) {
   return p.known ? T.sinceOpen(formatDuration(p.minutes)) : T.entriesOpen(value);
 }
 
-function ItemCard({ item, tint, refLabel, value, goal, pauseGoal, showPause, r, today, onPlus, onMinus, onOpenEntries, onEdit }) {
+/** Mindestabstand: wie lange noch zu warten ist, und wie oft er heute zu kurz war. */
+function GapRow({ r, today, goalMinutes, label, tint }) {
+  const now = useNow(20000);
+  const p = runningPause(r, today, now);
+  const breaks = gapBreaks(r, goalMinutes, today, today)[0];
+  const rest = p.known ? Math.ceil(goalMinutes - p.minutes) : null;
+  return (
+    <div className="dt-pause" data-testid="gap">
+      <div className="dt-pause__line">
+        <span className="dt-pause__text">
+          <Icon name="clock" size={18} />{' '}
+          {!p.known ? T.gapUnknown : rest > 0 ? T.gapNext(formatDuration(rest)) : T.gapFree}
+        </span>
+        {p.known && rest <= 0
+          ? <Tag tone="success">{T.gapFree}</Tag>
+          : <span className="kl-muted dt-small">{T.gapGoalText(formatDuration(goalMinutes))}</span>}
+      </div>
+      {p.known && rest > 0 && <Bar value={p.minutes} max={goalMinutes} label={T.gapProgressLabel(label)} tint={tint} />}
+      {!p.known && <span className="kl-muted dt-small">{p.reason === 'untimed' ? T.pauseUnknownWhy : T.pauseNoEntries}</span>}
+      {breaks > 0 && <span className="kl-muted dt-small" data-testid="gap-breaks">{T.gapBreaks(breaks)}</span>}
+    </div>
+  );
+}
+
+function ItemCard({ item, tint, refLabel, value, goal, pauseGoal, gapGoal, showPause, showGap, r, today, onPlus, onMinus, onOpenEntries, onEdit }) {
   const down = item.direction === 'down';
   const [bump, setBump] = useState(0);
   const prev = useRef(value);
@@ -122,6 +146,7 @@ function ItemCard({ item, tint, refLabel, value, goal, pauseGoal, showPause, r, 
           <Bar value={down ? Math.max(0, goal.value - value) : value} max={goal.value} label={T.progressLabel(item.label)} tint={tint} />
         </div>
       )}
+      {showGap && gapGoal != null && <GapRow r={r} today={today} goalMinutes={gapGoal} label={item.label} tint={tint} />}
       {showPause && pauseGoal != null && <PauseRow r={r} today={today} goalMinutes={pauseGoal} label={item.label} tint={tint} />}
     </Card>
   );

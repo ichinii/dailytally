@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { dayOfTs, keyToNum, numToKey, mondayOf, weekRangeLabel, tsForDayTime, formatDuration } from '../src/lib/days.js';
 import { evaluate, countGoalAt, applyCountGoal } from '../src/lib/goals.js';
-import { buildIndex, dailyPauses, runningPause, buildSeries, computeItemStats } from '../src/lib/stats.js';
+import { buildIndex, dailyPauses, gapBreaks, runningPause, buildSeries, computeItemStats } from '../src/lib/stats.js';
 import { parseImport, exportText } from '../src/lib/importExport.js';
 
 const at = (y, m, d, h, mi) => new Date(y, m - 1, d, h, mi).getTime();
@@ -64,6 +64,25 @@ test('Pause 23:00 → 10:00 zählt für den Endtag; laufende Pause seit 11 h', (
   const daily = dailyPauses(r2, K('2026-10-10'), K('2026-10-17'), now);
   assert.equal(daily[K('2026-10-17') - K('2026-10-10')], 660);
   assert.equal(daily[K('2026-10-16') - K('2026-10-10')], null);
+});
+
+test('Mindestabstand: zu kurze Abstände zählen am Tag des späteren Eintrags', () => {
+  const data = { version: 4, items: [pauseItem], entries: [
+    { id: 'a', itemId: 'c', day: '2026-10-16', ts: at(2026, 10, 16, 20, 0) },
+    { id: 'b', itemId: 'c', day: '2026-10-16', ts: at(2026, 10, 16, 20, 30) },  // 30 min: zu früh
+    { id: 'c', itemId: 'c', day: '2026-10-16', ts: at(2026, 10, 16, 22, 0) },  // 90 min: in Ordnung
+    { id: 'd', itemId: 'c', day: '2026-10-17', ts: at(2026, 10, 17, 22, 40) }, // über Nacht: in Ordnung
+    { id: 'e', itemId: 'c', day: '2026-10-17', ts: at(2026, 10, 17, 23, 0) },  // 20 min: zu früh
+  ] };
+  const r = buildIndex(data).byItem.get('c');
+  const breaks = gapBreaks(r, 60, K('2026-10-16'), K('2026-10-17'));
+  assert.deepEqual(breaks, [1, 1]);
+  assert.deepEqual(gapBreaks(r, 15, K('2026-10-16'), K('2026-10-17')), [0, 0], 'kurzer Abstand: nichts unterschritten');
+  assert.deepEqual(gapBreaks(r, 0, K('2026-10-16'), K('2026-10-17')), [0, 0], 'kein Abstand gesetzt');
+  // Fehlt dazwischen eine Uhrzeit, ist der Abstand unbekannt und wird nicht geraten.
+  const mitLuecke = { ...data, entries: [...data.entries, { id: 'u', itemId: 'c', day: '2026-10-17', ts: null }] };
+  const r2 = buildIndex(mitLuecke).byItem.get('c');
+  assert.deepEqual(gapBreaks(r2, 60, K('2026-10-17'), K('2026-10-17')), [0]);
 });
 
 test('Tag mit Eintrag ohne Uhrzeit dazwischen → Pause unbekannt', () => {

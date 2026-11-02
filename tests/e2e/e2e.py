@@ -64,11 +64,16 @@ def visible_days(pg):
 def strip_state(pg):
     return pg.evaluate("""() => { const el=document.querySelector('[data-testid=week-scroller]'); return {left: el.scrollLeft, w: el.clientWidth, max: el.scrollWidth-el.clientWidth, month: document.querySelector('.dt-strip__month').textContent}; }""")
 
-def item(id_, label, period='day', created='2026-10-01', goals=None, pauses=None):
-    return {'id': id_, 'label': label, 'period': period, 'createdDay': created, 'countGoals': goals or [], 'pauseGoals': pauses or []}
+def item(id_, label, period='day', created='2026-10-01', goals=None, pause_goals=None, gaps=None, direction=None):
+    it = {'id': id_, 'label': label, 'period': period, 'createdDay': created,
+          'countGoals': goals or [], 'pauseGoals': pause_goals or []}
+    if gaps is not None: it['gapGoals'] = gaps
+    if direction is not None: it['direction'] = direction
+    return it
 
-def data(items, entries=()):
-    return {'version': 3, 'items': list(items), 'entries': list(entries)}
+def data(items, entries=(), version=3):
+    """version=3 wird beim Laden migriert (Normalfall im Test); 4 für Stände mit neuen Feldern."""
+    return {'version': version, 'items': list(items), 'entries': list(entries)}
 
 def entries_n(item_id, day, n, ts=None, prefix='x'):
     return [{'id': f'{prefix}{day}{i}', 'itemId': item_id, 'day': day, 'ts': ts} for i in range(n)]
@@ -380,7 +385,7 @@ def test_day_boundary_and_times():
 def test_pauses():
     with sync_playwright() as p:
         b, ctx = new_ctx(p)
-        it = item('c', 'Zigaretten', created='2026-10-10', pauses=[{'from': '2026-10-10', 'minutes': 720}])
+        it = item('c', 'Zigaretten', created='2026-10-10', pause_goals=[{'from': '2026-10-10', 'minutes': 720}])
         d = data([it], [{'id': 'y', 'itemId': 'c', 'day': '2026-10-16', 'ts': ms(t(2026, 10, 16, 23, 0))}])
         pg = page(ctx, d, now=t(2026, 10, 17, 10, 0), label='pause')
         txt = card(pg, 'Zigaretten').locator('[data-testid=pause]').inner_text()
@@ -396,7 +401,7 @@ def test_pauses():
         b.close()
     with sync_playwright() as p:
         b, ctx = new_ctx(p)
-        it = item('c', 'Zigaretten', created='2026-10-08', pauses=[{'from': '2026-10-08', 'minutes': 600}])
+        it = item('c', 'Zigaretten', created='2026-10-08', pause_goals=[{'from': '2026-10-08', 'minutes': 600}])
         ents = [
             {'id': 'a', 'itemId': 'c', 'day': '2026-10-12', 'ts': ms(t(2026, 10, 12, 22, 0))},
             {'id': 'u', 'itemId': 'c', 'day': '2026-10-13', 'ts': None},
@@ -857,7 +862,9 @@ def test_round3_month_and_import():
         check('Namensbeispiel ohne „Zigaretten“', 'Zigaretten' not in (pg.locator('#dt-name').get_attribute('placeholder') or ''), pg.locator('#dt-name').get_attribute('placeholder'))
         pg.locator('#dt-name').fill('Friseur')
         pg.get_by_role('tab', name='Monat', exact=True).click()
-        check('Pausenziel nur bei Tages-Items', pg.locator('#dt-pause-on').count() == 0)
+        pg.get_by_role('button', name='Pausen').click(); pg.wait_for_timeout(150)
+        check('Pausenziel nur bei Tages-Items, Mindestabstand überall',
+              pg.locator('#dt-pause-on').count() == 0 and pg.locator('#dt-gap-on').count() == 1)
         pg.get_by_role('tab', name='mindestens').click(); pg.locator('#dt-goal-value').fill('2')
         pg.get_by_test_id('save').click(); pg.wait_for_timeout(450)
         it = stored(pg)['items'][-1]
@@ -1004,6 +1011,71 @@ def test_direction():
         check('Höchstwert legt „weniger ist besser“ an', stored(pg)['items'][0]['direction'] == 'down', stored(pg)['items'][0])
         b.close()
 
+# ------------------------------------------------------------------ Mindestabstand zwischen Einträgen
+def test_gap():
+    gap = lambda pg, name: card(pg, name).locator('[data-testid=gap]')
+    with sync_playwright() as p:
+        b, ctx = new_ctx(p)
+        # 60 min Abstand, letzter Eintrag 14:00 bei NOW = 14:32 -> noch 28 min
+        d = data([item('z', 'Zigaretten', gaps=[{'from': '2026-10-01', 'minutes': 60}])],
+                 [{'id': 'a', 'itemId': 'z', 'day': '2026-10-17', 'ts': ms(t(2026, 10, 17, 14, 0))}], version=4)
+        pg = page(ctx, d, now=NOW, label='gap')
+        check('Abstand zeigt die Restzeit', 'frühestens in 28 min' in gap(pg, 'Zigaretten').inner_text(), gap(pg, 'Zigaretten').inner_text())
+        check('Fortschritt zum Abstand sichtbar', gap(pg, 'Zigaretten').locator('.kl-bar, [role=progressbar]').count() >= 1)
+        check('Noch nichts unterschritten', gap(pg, 'Zigaretten').locator('[data-testid=gap-breaks]').count() == 0)
+        # Ein weiterer Eintrag jetzt ist zu früh und wird gezählt.
+        card(pg, 'Zigaretten').get_by_role('button', name='Eintrag hinzufügen').click(); pg.wait_for_timeout(400)
+        check('Zu früher Eintrag wird gezählt', gap(pg, 'Zigaretten').locator('[data-testid=gap-breaks]').inner_text() == 'heute 1× zu früh',
+              gap(pg, 'Zigaretten').inner_text())
+        check('Restzeit beginnt neu', 'frühestens in 1 h' in gap(pg, 'Zigaretten').inner_text(), gap(pg, 'Zigaretten').inner_text())
+        b.close()
+
+        # Abstand erfüllt, wenn lange nichts war
+        b, ctx = new_ctx(p)
+        d2 = data([item('z', 'Zigaretten', gaps=[{'from': '2026-10-01', 'minutes': 60}])],
+                  [{'id': 'a', 'itemId': 'z', 'day': '2026-10-17', 'ts': ms(t(2026, 10, 17, 9, 0))}], version=4)
+        pg = page(ctx, d2, now=NOW, label='gap2')
+        check('Nach genug Zeit gilt der Abstand als erfüllt', 'Abstand erfüllt' in gap(pg, 'Zigaretten').inner_text(), gap(pg, 'Zigaretten').inner_text())
+        b.close()
+
+        # Ohne Uhrzeit bleibt der Abstand unbekannt - nie geraten
+        b, ctx = new_ctx(p)
+        d3 = data([item('z', 'Zigaretten', gaps=[{'from': '2026-10-01', 'minutes': 60}])],
+                  [{'id': 'a', 'itemId': 'z', 'day': '2026-10-17', 'ts': None}], version=4)
+        pg = page(ctx, d3, now=NOW, label='gap3')
+        txt = gap(pg, 'Zigaretten').inner_text()
+        check('Eintrag ohne Uhrzeit: Abstand unbekannt mit Grund', 'Abstand unbekannt' in txt and 'keine Uhrzeit' in txt, txt)
+        b.close()
+
+        # Einstellen im Sheet: Abschnitt ist zugeklappt, bis etwas gesetzt ist
+        b, ctx = new_ctx(p)
+        pg = page(ctx, data([item('s', 'Sport', period='week')]), now=NOW, label='gap4')
+        card(pg, 'Sport').locator('.dt-item__name').click(); pg.wait_for_timeout(450)
+        fold = pg.get_by_role('button', name='Pausen')
+        check('Pausen-Abschnitt zugeklappt und als „aus“ beschriftet',
+              fold.get_attribute('aria-expanded') == 'false' and 'aus' in fold.inner_text(), fold.inner_text())
+        check('Kein Eingabefeld des Abschnitts im Weg', pg.locator('#dt-gap-on').count() == 0)
+        fold.click(); pg.wait_for_timeout(200)
+        check('Aufgeklappt: Mindestabstand auch bei Wochen-Items', pg.locator('#dt-gap-on').count() == 1 and pg.locator('#dt-pause-on').count() == 0)
+        # Das Kästchen selbst ist versteckt; getippt wird die Spur des Schalters.
+        pg.locator('label.kl-toggle:has(#dt-gap-on)').click(); pg.wait_for_timeout(100)
+        pg.locator('#dt-gap-h').fill('0'); pg.locator('#dt-gap-m').fill('90')
+        pg.get_by_test_id('save').click(); pg.wait_for_timeout(200)
+        check('Mehr als 59 Minuten wird abgelehnt', pg.locator('.dt-sheet .kl-field__error').count() >= 1)
+        pg.locator('#dt-gap-m').fill('30')
+        pg.get_by_test_id('save').click(); pg.wait_for_timeout(200)
+        # Geänderter Abstand ist ein Zielverlauf: dieselbe Rückfrage wie bei Zählzielen.
+        check('Geänderter Abstand fragt nach „Ab jetzt / Korrektur“', pg.locator('.dt-ask', has_text='ab wann').count() == 1)
+        pg.get_by_role('button', name='Ab jetzt').click(); pg.wait_for_timeout(450)
+        # Wochen-Item: Verlauf beginnt am Montag des Zeitraums
+        it = stored(pg)['items'][0]
+        check('Abstand als Verlauf ab Zeitraumbeginn gespeichert', it['gapGoals'] == [{'from': '2026-10-12', 'minutes': 30}], it)
+        card(pg, 'Sport').locator('.dt-item__name').click(); pg.wait_for_timeout(450)
+        fold = pg.get_by_role('button', name='Pausen')
+        check('Gesetzter Abstand klappt auf und steht in der Zusammenfassung',
+              fold.get_attribute('aria-expanded') == 'true' and '30 min' in fold.inner_text(), fold.inner_text())
+        b.close()
+
 for name, fn in [('items', test_create_and_sheet), ('drag', test_sheet_drag), ('goals', test_goal_eval_and_history),
                  ('plus', test_plus_minus), ('strip', test_strip), ('times', test_day_boundary_and_times),
                  ('pauses', test_pauses), ('overview', test_overview), ('perf', test_overview_perf),
@@ -1011,7 +1083,8 @@ for name, fn in [('items', test_create_and_sheet), ('drag', test_sheet_drag), ('
                  ('counter', test_counter_stable), ('reorder', test_reorder), ('jump', test_today_jump_and_calendar), ('ov2', test_overview_v2),
                  ('r3strip', test_round3_strip_and_drop), ('r3scroll', test_round3_scroll), ('r3month', test_round3_month_and_import),
                  ('migrate', test_migration),
-                 ('dir', test_direction)]:
+                 ('dir', test_direction),
+                 ('gap', test_gap)]:
     run(name, fn)
 
 print('\n==== ', sum(1 for r in RESULTS if r[1]), 'von', len(RESULTS), 'bestanden')

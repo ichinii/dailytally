@@ -6,6 +6,7 @@ Datenformat-Version in Klammern, wenn sie sich geändert hat – dann läuft bei
 
 ## Unveröffentlicht
 
+- Neues Ziel **Mindestabstand**: wie viel Zeit zwischen zwei Einträgen liegen soll. Die Karte zeigt, wie lange noch zu warten ist, und zählt zu frühe Einträge. Unabhängig vom bisherigen Pausenziel – beides darf gleichzeitig gesetzt sein (z. B. 1 h zwischen Zigaretten und 12 h über Nacht). Pausenziel und Mindestabstand liegen jetzt hinter der aufklappbaren Zeile „Pausen“.
 - Items haben eine Richtung: „mehr ist besser“ oder „weniger ist besser“. Bei „weniger ist besser“ zeigt die Karte groß das Restbudget statt des steigenden Zählers – und ohne Limit die Zeit seit dem letzten Eintrag. Die Knöpfe behalten ihre Bedeutung: Plus erfasst, Minus korrigiert. Bestehende Items bekommen die Richtung aus ihrem Zieltyp.
 
 ## 1.0 – 2026-11-02

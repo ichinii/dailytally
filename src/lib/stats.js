@@ -97,6 +97,24 @@ export function dailyPauses(r, start, today, now) {
   return out;
 }
 
+/**
+ * Wie oft der Mindestabstand je Tag unterschritten wurde, gezählt am Tag des
+ * späteren Eintrags. Fehlt dazwischen eine Uhrzeit, ist der Abstand unbekannt
+ * und wird nicht gezählt – nie geraten.
+ */
+export function gapBreaks(r, minutes, start, today) {
+  const out = new Array(today - start + 1).fill(0);
+  if (!r || !minutes) return out;
+  const t = r.timed;
+  for (let i = 1; i < t.length; i++) {
+    const a = t[i - 1], b = t[i];
+    if (b.day < start || b.day > today) continue;
+    if (hasUntimedIn(r.untimed, a.day, b.day)) continue;
+    if ((b.ts - a.ts) / 60000 < minutes) out[b.day - start]++;
+  }
+  return out;
+}
+
 /** Uhrzeit des ersten Eintrags je Tag (Minuten seit 04:00); Tage mit einem Eintrag ohne Uhrzeit fallen weg. */
 export function firstEntryMinutes(r, start, today) {
   const out = new Array(today - start + 1).fill(null);

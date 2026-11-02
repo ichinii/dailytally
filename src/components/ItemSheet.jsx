@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { Button, Tabs, Tag } from '../kladde/kladde.js';
+import { Button, Icon, Tabs, Tag } from '../kladde/kladde.js';
 import DragSheet from './DragSheet.jsx';
-import { countGoalAt, pauseGoalAt, periodStart, countGoalChanged, pauseGoalChanged, PERIODS } from '../lib/goals.js';
+import { countGoalAt, gapGoalAt, pauseGoalAt, periodStart, countGoalChanged, gapGoalChanged, pauseGoalChanged, PERIODS } from '../lib/goals.js';
 import { formatDayShort, formatDuration, keyToNum } from '../lib/days.js';
 import { T } from '../strings.js';
 
@@ -9,8 +9,8 @@ const parseIntStrict = (s) => (/^\s*\d+\s*$/.test(s) ? parseInt(s, 10) : NaN);
 
 function historyText(item) {
   const c = item.countGoals.map((g) => `${T.historyFrom(formatDayShort(keyToNum(g.from)))}: ${g.value == null ? T.historyNone : `${g.type === 'max' ? T.goalMax : T.goalMin} ${g.value}`}`);
-  const p = item.pauseGoals.map((g) => `${T.historyFrom(formatDayShort(keyToNum(g.from)))}: ${g.minutes == null ? T.historyNone : formatDuration(g.minutes)}`);
-  return { c: c.join(' · '), p: p.join(' · ') };
+  const mins = (list) => list.map((g) => `${T.historyFrom(formatDayShort(keyToNum(g.from)))}: ${g.minutes == null ? T.historyNone : formatDuration(g.minutes)}`).join(' · ');
+  return { c: c.join(' · '), p: mins(item.pauseGoals), g: mins(item.gapGoals) };
 }
 
 /** Anlegen und Bearbeiten eines Items im selben Eingabe-Sheet. */
@@ -19,6 +19,7 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
   const curStart = item ? periodStart(item.period, today) : today;
   const initGoal = item ? countGoalAt(item, curStart) : null;
   const initPause = item && item.period === 'day' ? pauseGoalAt(item, today) : null;
+  const initGap = item ? gapGoalAt(item, curStart) : null;
 
   const [name, setName] = useState(item ? item.label : '');
   const [period, setPeriod] = useState(item ? item.period : 'day');
@@ -29,6 +30,11 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
   const [pauseOn, setPauseOn] = useState(initPause != null);
   const [pauseH, setPauseH] = useState(initPause != null ? String(Math.floor(initPause / 60)) : '12');
   const [pauseM, setPauseM] = useState(initPause != null ? String(initPause % 60) : '0');
+  const [gapOn, setGapOn] = useState(initGap != null);
+  const [gapH, setGapH] = useState(initGap != null ? String(Math.floor(initGap / 60)) : '1');
+  const [gapM, setGapM] = useState(initGap != null ? String(initGap % 60) : '0');
+  // Zugeklappt, solange nichts gesetzt ist: so bleiben die Tippfelder oben über der Tastatur.
+  const [foldOpen, setFoldOpen] = useState(initPause != null || initGap != null);
   const [tried, setTried] = useState(false);
   const [asking, setAsking] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -41,25 +47,32 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
   const ph = parseIntStrict(pauseH || '0'), pm = parseIntStrict(pauseM || '0');
   const pauseMinutes = Number.isInteger(ph) && Number.isInteger(pm) && pm <= 59 ? ph * 60 + pm : NaN;
   const pauseOk = !pauseOn || period !== 'day' || pauseMinutes > 0;
+  const gh = parseIntStrict(gapH || '0'), gm = parseIntStrict(gapM || '0');
+  const gapRaw = Number.isInteger(gh) && Number.isInteger(gm) && gm <= 59 ? gh * 60 + gm : NaN;
+  const gapOk = !gapOn || gapRaw > 0;
+  const nextGap = gapOn ? gapRaw : null;
   const nextGoal = goalType === 'none' ? null : { type: goalType, value: gv };
   const nextPause = period === 'day' && pauseOn ? pauseMinutes : null;
 
   const save = (close, mode) => {
     if (!trimmed) return;
     setTried(true);
-    if (!goalOk || !pauseOk) return;
+    if (!goalOk || !pauseOk || !gapOk) return;
+    if ((pauseOn || gapOn) && !foldOpen) setFoldOpen(true);
     if (!editing) {
-      onCreate({ label: trimmed.slice(0, 40), period, direction, countGoal: nextGoal, pauseMinutes: nextPause });
+      onCreate({ label: trimmed.slice(0, 40), period, direction, countGoal: nextGoal, pauseMinutes: nextPause, gapMinutes: nextGap });
       close();
       return;
     }
-    const changed = countGoalChanged(item, curStart, nextGoal) || (item.period === 'day' && pauseGoalChanged(item, today, nextPause));
+    const changed = countGoalChanged(item, curStart, nextGoal)
+      || (item.period === 'day' && pauseGoalChanged(item, today, nextPause))
+      || gapGoalChanged(item, curStart, nextGap);
     if (changed && !mode) {
       setAsking(true);
       setTimeout(() => askRef.current && askRef.current.focus(), 0);
       return;
     }
-    onUpdate(item.id, { label: trimmed.slice(0, 40), direction, countGoal: nextGoal, pauseMinutes: nextPause, mode: changed ? mode : null });
+    onUpdate(item.id, { label: trimmed.slice(0, 40), direction, countGoal: nextGoal, pauseMinutes: nextPause, gapMinutes: nextGap, mode: changed ? mode : null });
     close();
   };
 
@@ -137,32 +150,79 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
           </div>
 
 
-          {period === 'day' && (
-            <div className="kl-field">
-              <div className="dt-pause-row">
-                <span className="kl-field__label dt-pause-label">{T.pauseGoalLabel}</span>
-                <label className="kl-toggle dt-toggle-only">
-                  <span className="dt-sr">{T.pauseToggle}</span>
-                  <input type="checkbox" role="switch" checked={pauseOn} onChange={(e) => setPauseOn(e.target.checked)} id="dt-pause-on" />
-                  <span className="kl-toggle__track" aria-hidden="true" />
-                </label>
-                {pauseOn && (
-                  <>
-                    <input id="dt-pause-h" className="kl-input dt-num" inputMode="numeric" value={pauseH} aria-label={T.hoursLabel}
-                      aria-invalid={tried && !pauseOk ? 'true' : undefined} enterKeyHint="done"
-                      onChange={(e) => setPauseH(e.target.value.replace(/[^\d]/g, '').slice(0, 3))} onKeyDown={onEnter(close)} />
-                    <span>{T.hours}</span>
-                    <input id="dt-pause-m" className="kl-input dt-num" inputMode="numeric" value={pauseM} aria-label={T.minutesLabel}
-                      aria-invalid={tried && !pauseOk ? 'true' : undefined} enterKeyHint="done"
-                      onChange={(e) => setPauseM(e.target.value.replace(/[^\d]/g, '').slice(0, 2))} onKeyDown={onEnter(close)} />
-                    <span>{T.minutes}</span>
-                  </>
+          <div className="dt-fold">
+            <button
+              type="button" className="dt-fold__head" aria-expanded={foldOpen}
+              onClick={() => setFoldOpen((o) => !o)}
+            >
+              <span className="kl-field__label">{T.pauseSection}</span>
+              <span className="kl-muted dt-small">
+                {pauseOn || gapOn
+                  ? T.pauseSectionOn([
+                    ...(pauseOn && period === 'day' ? [`${T.pauseGoalShort} ${formatDuration(pauseMinutes || 0)}`] : []),
+                    ...(gapOn ? [`${T.gapGoalShort} ${formatDuration(gapRaw || 0)}`] : []),
+                  ])
+                  : T.pauseSectionOff}
+              </span>
+              <Icon name="chevron-down" size={18} />
+            </button>
+
+            {foldOpen && (
+              <>
+                {period === 'day' && (
+                  <div className="kl-field">
+                    <div className="dt-pause-row">
+                      <span className="kl-field__label dt-pause-label">{T.pauseGoalLabel}</span>
+                      <label className="kl-toggle dt-toggle-only">
+                        <span className="dt-sr">{T.pauseToggle}</span>
+                        <input type="checkbox" role="switch" checked={pauseOn} onChange={(e) => setPauseOn(e.target.checked)} id="dt-pause-on" />
+                        <span className="kl-toggle__track" aria-hidden="true" />
+                      </label>
+                      {pauseOn && (
+                        <>
+                          <input id="dt-pause-h" className="kl-input dt-num" inputMode="numeric" value={pauseH} aria-label={T.hoursLabel}
+                            aria-invalid={tried && !pauseOk ? 'true' : undefined} enterKeyHint="done"
+                            onChange={(e) => setPauseH(e.target.value.replace(/[^\d]/g, '').slice(0, 3))} onKeyDown={onEnter(close)} />
+                          <span>{T.hours}</span>
+                          <input id="dt-pause-m" className="kl-input dt-num" inputMode="numeric" value={pauseM} aria-label={T.minutesLabel}
+                            aria-invalid={tried && !pauseOk ? 'true' : undefined} enterKeyHint="done"
+                            onChange={(e) => setPauseM(e.target.value.replace(/[^\d]/g, '').slice(0, 2))} onKeyDown={onEnter(close)} />
+                          <span>{T.minutes}</span>
+                        </>
+                      )}
+                      {!pauseOn && <span className="kl-muted dt-small dt-pause-hint">{T.pauseHint}</span>}
+                    </div>
+                    {tried && !pauseOk && <span className="kl-field__error">{T.pauseError}</span>}
+                  </div>
                 )}
-                {!pauseOn && <span className="kl-muted dt-small dt-pause-hint">{T.pauseHint}</span>}
-              </div>
-              {tried && !pauseOk && <span className="kl-field__error">{T.pauseError}</span>}
-            </div>
-          )}
+
+                <div className="kl-field">
+                  <div className="dt-pause-row">
+                    <span className="kl-field__label dt-pause-label">{T.gapGoalLabel}</span>
+                    <label className="kl-toggle dt-toggle-only">
+                      <span className="dt-sr">{T.gapToggle}</span>
+                      <input type="checkbox" role="switch" checked={gapOn} onChange={(e) => setGapOn(e.target.checked)} id="dt-gap-on" />
+                      <span className="kl-toggle__track" aria-hidden="true" />
+                    </label>
+                    {gapOn && (
+                      <>
+                        <input id="dt-gap-h" className="kl-input dt-num" inputMode="numeric" value={gapH} aria-label={T.hoursLabel}
+                          aria-invalid={tried && !gapOk ? 'true' : undefined} enterKeyHint="done"
+                          onChange={(e) => setGapH(e.target.value.replace(/[^\d]/g, '').slice(0, 3))} onKeyDown={onEnter(close)} />
+                        <span>{T.hours}</span>
+                        <input id="dt-gap-m" className="kl-input dt-num" inputMode="numeric" value={gapM} aria-label={T.minutesLabel}
+                          aria-invalid={tried && !gapOk ? 'true' : undefined} enterKeyHint="done"
+                          onChange={(e) => setGapM(e.target.value.replace(/[^\d]/g, '').slice(0, 2))} onKeyDown={onEnter(close)} />
+                        <span>{T.minutes}</span>
+                      </>
+                    )}
+                    {!gapOn && <span className="kl-muted dt-small dt-pause-hint">{T.gapHint}</span>}
+                  </div>
+                  {tried && !gapOk && <span className="kl-field__error">{T.gapError}</span>}
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Ohne Ziel ist die Richtung nicht ableitbar – dann wird sie gefragt. */}
           {goalType === 'none' && (
@@ -174,11 +234,12 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
           )}
           {goalType === 'none' && <span className="kl-field__hint dt-tight">{T.dirHint}</span>}
 
-          {editing && (hist.c || hist.p) && (
+          {editing && (hist.c || hist.p || hist.g) && (
             <div className="dt-history">
               <span className="kl-field__label">{T.history}</span>
               {hist.c && <span className="dt-small">{T.countGoal}: {hist.c}</span>}
               {hist.p && <span className="dt-small">{T.pauseGoalLabel}: {hist.p}</span>}
+              {hist.g && <span className="dt-small">{T.gapGoalLabel}: {hist.g}</span>}
             </div>
           )}
 

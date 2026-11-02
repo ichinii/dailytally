@@ -9,7 +9,7 @@ import { refLabelFor } from './components/TrackView.jsx';
 import { loadData, saveData, emptyData, newId, requestPersistentStorage } from './lib/storage.js';
 import { buildIndex, dayNum, runningPause } from './lib/stats.js';
 import { dayOfTs, numToKey, mondayOf, formatClock, formatDuration, keyToNum } from './lib/days.js';
-import { periodStart, periodEnd, pauseGoalAt, applyCountGoal, applyPauseGoal, countGoalAt } from './lib/goals.js';
+import { periodStart, periodEnd, pauseGoalAt, gapGoalAt, applyCountGoal, applyMinutesGoal, countGoalAt } from './lib/goals.js';
 import { cssMs } from './lib/ui.js';
 import { T } from './strings.js';
 
@@ -181,19 +181,20 @@ export default function App() {
     setData((d) => ({ ...d, entries: d.entries.map((e) => (e.id === entryId ? { ...e, ts } : e)) }));
   }, []);
 
-  const onCreate = useCallback(({ label, period, direction, countGoal, pauseMinutes }) => {
+  const onCreate = useCallback(({ label, period, direction, countGoal, pauseMinutes, gapMinutes }) => {
     const t = checkDay();
     const from = numToKey(periodStart(period, t));
     const item = {
       id: newId('i'), label, period, createdDay: numToKey(t), direction,
       countGoals: countGoal ? [{ from, type: countGoal.type, value: countGoal.value }] : [],
       pauseGoals: period === 'day' && pauseMinutes != null ? [{ from, minutes: pauseMinutes }] : [],
-      gapGoals: [], pauses: [],
+      gapGoals: gapMinutes != null ? [{ from, minutes: gapMinutes }] : [],
+      pauses: [],
     };
     setData((d) => ({ ...d, items: [...d.items, item] }));
   }, [checkDay]);
 
-  const onUpdate = useCallback((id, { label, direction, countGoal, pauseMinutes, mode }) => {
+  const onUpdate = useCallback((id, { label, direction, countGoal, pauseMinutes, gapMinutes, mode }) => {
     const t = checkDay();
     setData((d) => ({
       ...d,
@@ -210,7 +211,11 @@ export default function App() {
           const sameCount = (cg == null && countGoal == null) || (cg && countGoal && cg.type === countGoal.type && cg.value === countGoal.value);
           if (!sameCount) next.countGoals = applyCountGoal(it.countGoals, mode, cur, createdStart, countGoal);
           if (it.period === 'day' && (pauseGoalAt(it, t) ?? null) !== (pauseMinutes ?? null)) {
-            next.pauseGoals = applyPauseGoal(it.pauseGoals, mode, t, createdStart, pauseMinutes);
+            next.pauseGoals = applyMinutesGoal(it.pauseGoals, mode, t, createdStart, pauseMinutes);
+          }
+          // Der Mindestabstand hängt wie die Ziele am Zeitraumbeginn.
+          if ((gapGoalAt(it, cur) ?? null) !== (gapMinutes ?? null)) {
+            next.gapGoals = applyMinutesGoal(it.gapGoals, mode, cur, createdStart, gapMinutes);
           }
         }
         return next;

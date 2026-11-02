@@ -137,6 +137,18 @@ button { -webkit-tap-highlight-color: transparent; }
 .dt-counter__value--wide { width: auto; min-width: var(--counter-w); padding: 0 var(--space-1); }
 .dt-counter__num--time { font-size: 20px; line-height: 26px; white-space: nowrap; }
 .dt-counter__sub { text-align: right; }
+
+/* Aufklappbarer Abschnitt im Item-Sheet: hält die Tippfelder im Ausgangszustand oben */
+.dt-fold { display: grid; gap: var(--space-2); }
+.dt-fold__head {
+  display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 44px; padding: 0;
+  font: inherit; color: var(--ink); background: transparent; border: 0; text-align: left; cursor: pointer;
+}
+.dt-fold__head .kl-field__label { margin: 0; }
+.dt-fold__head > .kl-muted { margin-left: auto; text-align: right; }
+.dt-fold__head .kl-icon { flex: none; color: var(--ink-muted); transition: transform var(--dur-fast, 140ms) ease; }
+.dt-fold__head[aria-expanded="true"] .kl-icon { transform: rotate(180deg); }
+.dt-fold__head:focus-visible { outline: 2px solid transparent; box-shadow: var(--focus-ring); border-radius: var(--kl-wobble-sm); }
 .dt-goal { display: grid; gap: 6px; }
 .dt-goal__line, .dt-pause__line { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
 .dt-pause { display: grid; gap: 6px; }

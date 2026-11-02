@@ -63,6 +63,22 @@ export const T = {
   overOpen: (over) => `${n(over, 'Eintrag', 'Einträge')} über dem Limit – Liste öffnen`,
   sinceOpen: (dur) => `seit ${dur} kein Eintrag – Liste öffnen`,
   pauseProgressLabel: (name) => `Pause ${name}`,
+  // Mindestabstand zwischen zwei Einträgen
+  pauseSection: 'Pausen',
+  pauseSectionOff: 'aus',
+  pauseSectionOn: (what) => what.join(' · '),
+  pauseGoalShort: 'längste Pause am Tag',
+  gapGoalLabel: 'Abstand zwischen Einträgen',
+  gapGoalShort: 'Abstand dazwischen',
+  gapToggle: 'Mindestabstand einschalten',
+  gapHint: 'Aus. Mindestens so viel Zeit soll zwischen zwei Einträgen liegen.',
+  gapError: 'Bitte eine Dauer über 0 angeben.',
+  gapNext: (dur) => `Nächster Eintrag frühestens in ${dur}`,
+  gapFree: 'Abstand erfüllt',
+  gapGoalText: (dur) => `Abstand ${dur}`,
+  gapUnknown: 'Abstand unbekannt',
+  gapBreaks: (count) => `heute ${count}× zu früh`,
+  gapProgressLabel: (name) => `Abstand ${name}`,
 
   // Toasts
   captured: (time) => `Erfasst ${time}`,

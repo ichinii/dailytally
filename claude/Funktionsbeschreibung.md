@@ -104,6 +104,9 @@ Ein Item wird über einen Hinzufügen-Knopf unter der Liste angelegt (bei leerer
 | Zählziel | nein | „kein“ / „höchstens“ / „mindestens“ + ganze Zahl ≥ 1 (Vorschlag 10 bzw. 3) |
 | Richtung | ja | „mehr ist besser“ / „weniger ist besser“. Wird nur gefragt, wenn kein Zählziel gesetzt ist; mit Ziel folgt sie dem Zieltyp (höchstens → weniger ist besser) und wird als Hinweis angezeigt. Änderbar, ohne Rückfrage nach „ab jetzt“ oder „Korrektur“ – die Richtung ist Anzeige, kein Verlauf. |
 | Pausenziel | nein | Schalter + Dauer in Stunden und Minuten (Vorschlag 12 h); nur bei Tages-Items angeboten |
+| Mindestabstand | nein | Schalter + Dauer in Stunden und Minuten (Vorschlag 1 h); bei jedem Zeitraum angeboten. Gemeint ist der Abstand zwischen zwei Einträgen, unabhängig vom Pausenziel – beides darf gleichzeitig gesetzt sein |
+
+Pausenziel und Mindestabstand liegen hinter der aufklappbaren Zeile **„Pausen“**. Sie ist zugeklappt, solange keines von beiden gesetzt ist, und nennt dann „aus“; sonst klappt sie auf und zeigt in der Kopfzeile die gesetzten Werte. Grund: so bleiben im Ausgangszustand alle Tippfelder in der oberen Bildschirmhälfte.
 
 **Zielbewertung** (gilt überall in der App)
 
@@ -125,7 +128,7 @@ Ein Item wird über einen Hinzufügen-Knopf unter der Liste angelegt (bei leerer
 
 **Verhalten der Sheets** (gilt für alle: Item, Eintragsliste, Export, Import)
 
-- Alle Eingabefelder und der Speichern-Knopf liegen in der oberen Bildschirmhälfte, damit die Bildschirmtastatur sie nicht verdeckt.
+- Alle Eingabefelder und der Speichern-Knopf liegen **im Ausgangszustand** in der oberen Bildschirmhälfte, damit die Bildschirmtastatur sie nicht verdeckt. Felder in einem aufgeklappten Abschnitt dürfen tiefer liegen; der Browser scrollt das fokussierte Feld dann über die Tastatur.
 - Das Sheet fährt ein; erst danach bekommt das Namensfeld den Fokus (Sheet und Tastatur sollen nicht gleichzeitig animieren). Beim Bearbeiten wird nicht automatisch fokussiert.
 - Schließen über Abbrechen, Tipp auf den Hintergrund, Escape oder Herunterziehen am Griff.
 - Herunterziehen: Das Sheet folgt dem Finger ohne Verzögerung; die Tastatur schließt beim Ziehen. Loslassen nach mehr als ca. 25 % der Höhe oder nach einem schnellen Wisch nach unten schließt, sonst federt es zurück. Ziehen, das auf einem Knopf beginnt, löst kein Ziehen aus.
@@ -175,6 +178,13 @@ Die Hauptansicht besteht aus einem wischbaren Wochenstreifen zur Tagesauswahl un
 - Erlaubt sind nur Zeiten im Fenster des Eintragstags (04:00 bis 03:59 des Folgetags – Stunden vor 4 landen automatisch am Folgetag) und nicht in der Zukunft; eine künftige Zeit wird mit „Diese Uhrzeit liegt in der Zukunft.“ abgelehnt und nichts geändert.
 - „Löschen“ im Zeitwähler (leere Uhrzeit) macht aus dem Eintrag wieder einen ohne Uhrzeit.
 - Pro Eintrag gibt es einen Löschknopf. Gelöschte Einträge lassen sich über den Toast „Rückgängig“ an ihrer alten Stelle wiederherstellen (solange das Item noch existiert).
+
+**Mindestabstand** (jedes Item mit Mindestabstand, nur wenn heute gewählt ist)
+
+- Zeigt, wie lange bis zum nächsten Eintrag noch zu warten ist („Nächster Eintrag frühestens in 28 min“) mit Fortschritt zum Abstand; ist genug Zeit vergangen, steht „Abstand erfüllt“.
+- Hat der letzte Eintrag keine Uhrzeit oder gibt es keinen, steht „Abstand unbekannt“ samt Grund – der Abstand wird nie geschätzt.
+- Wie oft der Abstand heute unterschritten wurde, steht als Zeile darunter („heute 2× zu früh“). Gezählt wird am Tag des späteren Eintrags, und nur wenn beide Uhrzeiten bekannt sind.
+- Der Mindestabstand ist ein Zielverlauf wie die Zählziele: Ändern fragt nach „Ab jetzt“ oder „Korrektur für den ganzen Verlauf“, `from` ist der Zeitraumbeginn.
 
 **Pausen-Zähler** (nur Tages-Items mit Pausenziel, nur wenn heute gewählt ist)
 
@@ -307,6 +317,14 @@ Erfüllt in Handy-Breite und im sandboxed iframe, ohne Fehler in der Konsole. `[
 - [x] „Weniger ist besser“ ohne Ziel zeigt groß die Zeit seit dem letzten Eintrag; ohne Eintrag mit Uhrzeit bleibt es beim Zähler.
 - [x] Plus legt auch bei „weniger ist besser“ einen Eintrag an, Minus entfernt ihn.
 - [x] Beim Anlegen wird die Richtung nur ohne Zählziel gefragt; „höchstens“ legt „weniger ist besser“ an.
+
+**Mindestabstand**
+
+- [x] Bei 60 min Abstand und letztem Eintrag um 14:00 steht um 14:32 „frühestens in 28 min“ mit Fortschritt; nach genug Zeit „Abstand erfüllt“.
+- [x] Ein zu früher Eintrag wird als „heute 1× zu früh“ gezählt, und die Restzeit beginnt neu.
+- [x] Ein Eintrag ohne Uhrzeit führt zu „Abstand unbekannt“ mit Grund, nicht zu einer geschätzten Zahl.
+- [x] Der Abschnitt „Pausen“ ist zugeklappt, solange nichts gesetzt ist, und zeigt aufgeklappt den Mindestabstand auch bei Wochen-Items (Pausenziel dort nicht).
+- [x] Mehr als 59 Minuten im Minutenfeld wird abgelehnt; ein geänderter Abstand fragt nach „Ab jetzt / Korrektur“ und wird ab Zeitraumbeginn gespeichert.
 
 **Track-Ansicht**
 
