@@ -6,6 +6,7 @@ Mobile Web-App (PWA) zum Zählen, wie oft etwas pro Tag, Woche oder Monat passie
 
 - `claude/Funktionsbeschreibung.md` – maßgebliche Beschreibung des **gebauten** Verhaltens inkl. Datenmodell, Stolperfallen und Abnahmekriterien. Vor Arbeit an Funktionen zuerst dort lesen.
 - `claude/Design.md` – Designsystem „Kladde“ (Fassung 2). Tokens in `src/design/tokens.json`, Komponenten in `src/kladde/`. Regeln beachten (Pastellkarten, Textmarker, wellige Linien, keine Schatten auf Karten, Deutsch/du-Form).
+- `CHANGELOG.md` – Änderungen pro Release aus Sicht der Nutzung, kurz. Wird beim Release gefüllt; während der Arbeit wandern Einträge in den Abschnitt „Unveröffentlicht“.
 - Beide Dokumente sind lebend: Wird Verhalten oder Gestaltung geändert, wandert die Änderung im selben Commit in das passende Dokument (neues Verhalten in den Abschnitt, neuer Prüfpunkt in die Abnahmekriterien). Kein Duplizieren von Befehlen oder Dateiaufbau – die stehen in `README.md`.
 
 ## Befehle
@@ -38,6 +39,7 @@ Checkliste, vollständig abzuarbeiten **vor** dem Tag:
 4. `npm run build` ohne Fehler.
 5. Bei geänderter Datenform: genau ein Migrationsschritt für dieses Release, mit `release`-Nummer und eigenem Test; Tabelle Release ↔ Datenformat in `claude/Funktionsbeschreibung.md` ergänzt.
 6. `claude/Funktionsbeschreibung.md` und `claude/Design.md` auf dem Stand des Codes.
+   `CHANGELOG.md`: Abschnitt „Unveröffentlicht“ in einen Release-Abschnitt mit Datum umbenennen, neuen leeren anlegen.
 7. `package.json`-Version = Tag ohne `v`.
 8. `git tag -a vX.Y -m "Release X.Y"`.
 9. `git push origin main --follow-tags`, danach den Workflow-Lauf prüfen: erst wenn `deploy` grün ist, ist das Release draußen (siehe README, „Veröffentlichen“).

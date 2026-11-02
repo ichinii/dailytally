@@ -25,6 +25,9 @@ Gespeichert werden einzelne Einträge mit festem Tag und optionaler Uhrzeit; all
 - **Item:** etwas, das gezählt wird. Hat einen Namen, einen Zeitraum (`day`, `week` oder `month`), ein Anlagedatum und optional ein Zählziel und ein Pausenziel. Die Reihenfolge der Items ist die Reihenfolge im Array `items` und lässt sich in der Track-Ansicht ändern.
 - **Eintrag:** ein einzelnes Vorkommen. Speichert immer den Tag (`day`) und, wenn bekannt, den genauen Zeitpunkt (`ts`, Millisekunden seit 1970 UTC). Unbekannte Uhrzeit = `null`, niemals 0.
 - **Zielverlauf:** Ziele werden nicht überschrieben, sondern als Liste mit Startdatum geführt (`from`). Für einen Zeitraum gilt der letzte Eintrag, dessen `from` am oder vor dem Beginn des Zeitraums liegt. `value: null` heißt „ab hier kein Ziel“. `from` ist immer ein Zeitraumbeginn: der Tag bei Tages-Items, der Montag bei Wochen-Items, der Monatserste bei Monats-Items.
+- **Richtung:** jedes Item hat `direction`. `up` heißt „mehr ist besser“ (Sport), `down` heißt „weniger ist besser“ (Zigaretten). Die Richtung bestimmt, welche Zahl die Karte groß anzeigt, nicht die Bedeutung der Knöpfe: Plus erfasst immer ein Ereignis, Minus ist immer die Korrektur.
+- **Mindestabstand:** `gapGoals`, Verlauf in derselben Form wie das Pausenziel (`from`, `minutes` bzw. `null`). Gemeint ist der Abstand zwischen zwei aufeinanderfolgenden Einträgen – unabhängig vom Pausenziel, beides darf gleichzeitig gesetzt sein. Gilt für alle Zeiträume, nicht nur für Tages-Items.
+- **Aussetzen:** `pauses`, Liste von Zeiträumen `{ from, to }` mit Tagesschlüsseln; `to: null` heißt „läuft noch“. Zeiträume sind sortiert, überlappen nicht, und eine offene Pause kann nur die letzte sein. Ausgesetzte Tage fallen aus Auswertungen heraus, sie zählen nicht als null.
 - **Datenformat-Version:** das Feld `version` sagt, nach welcher Fassung ein Datensatz aufgebaut ist. Es ist ein eigener Zähler, unabhängig von der Release-Nummer der App, und steigt höchstens einmal pro Release – oft gar nicht.
 - **Pausenziel-Verlauf:** gleiches Prinzip, mit `minutes` (z. B. 720 = 12 h) bzw. `null`. Nur Tages-Items haben Pausenziele; bei Wochen- und Monats-Items ist `pauseGoals` immer leer (der Import räumt das auf).
 
@@ -66,6 +69,7 @@ Alte Stände werden nicht verworfen, sondern gehoben. Die Migration ist eine Ket
 | Release | Datenformat-Version |
 | --- | --- |
 | 1.0 | 3 |
+| 1.1 | 4 – `direction`, `gapGoals`, `pauses` je Item |
 
 Der Speicherschlüssel behält dauerhaft seinen historischen Namen `daily-tally-v3`: er ist nur ein Name, ein Umbenennen würde die Daten aller bestehenden Nutzer verwaisen lassen. Die Wahrheit über das Format steht im Feld `version`.
 

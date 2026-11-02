@@ -27,7 +27,8 @@ function validCountGoals(list) {
   return out.sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : 0));
 }
 
-function validPauseGoals(list) {
+/** Verlauf mit Minuten-Wert: Pausenziel und Mindestabstand haben dieselbe Form. */
+function validMinutesGoals(list) {
   if (!Array.isArray(list)) return null;
   const out = [];
   for (const g of list) {
@@ -39,6 +40,24 @@ function validPauseGoals(list) {
   return out.sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : 0));
 }
 
+/** Zeiträume, in denen ein Item ausgesetzt ist: `to: null` heißt „läuft noch“. */
+function validPauses(list) {
+  if (!Array.isArray(list)) return null;
+  const out = [];
+  for (const p of list) {
+    if (!isObj(p) || !isValidKey(p.from)) return null;
+    if (!(p.to === null || isValidKey(p.to))) return null;
+    if (p.to !== null && p.to < p.from) return null;
+    out.push({ from: p.from, to: p.to });
+  }
+  out.sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : 0));
+  // Überlappungen würden Tage doppelt ausnehmen; eine offene Pause darf nur die letzte sein.
+  for (let i = 1; i < out.length; i++) {
+    if (out[i - 1].to === null || out[i].from <= out[i - 1].to) return null;
+  }
+  return out;
+}
+
 /** Prüft das aktuelle Format und liefert eine saubere Kopie. */
 export function validateCurrent(obj) {
   if (!isObj(obj) || obj.version !== DATA_VERSION || !Array.isArray(obj.items) || !Array.isArray(obj.entries)) return fail('format');
@@ -48,10 +67,16 @@ export function validateCurrent(obj) {
     if (!isObj(it) || typeof it.id !== 'string' || !it.id || ids.has(it.id)) return fail('items');
     const label = cleanLabel(it.label);
     const countGoals = validCountGoals(it.countGoals ?? []);
-    const pauseGoals = validPauseGoals(it.pauseGoals ?? []);
-    if (!label || !PERIODS.includes(it.period) || !isValidKey(it.createdDay) || !countGoals || !pauseGoals) return fail('items');
+    const pauseGoals = validMinutesGoals(it.pauseGoals ?? []);
+    const gapGoals = validMinutesGoals(it.gapGoals ?? []);
+    const pauses = validPauses(it.pauses ?? []);
+    const direction = it.direction === 'down' ? 'down' : 'up';
+    if (!label || !PERIODS.includes(it.period) || !isValidKey(it.createdDay) || !countGoals || !pauseGoals || !gapGoals || !pauses) return fail('items');
     ids.add(it.id);
-    items.push({ id: it.id, label, period: it.period, createdDay: it.createdDay, countGoals, pauseGoals: it.period === 'day' ? pauseGoals : [] });
+    items.push({
+      id: it.id, label, period: it.period, createdDay: it.createdDay, direction,
+      countGoals, pauseGoals: it.period === 'day' ? pauseGoals : [], gapGoals, pauses,
+    });
   }
   const entries = [];
   const eids = new Set();

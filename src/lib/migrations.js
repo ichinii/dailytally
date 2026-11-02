@@ -16,8 +16,30 @@
 export const BASE_VERSION = 3;
 
 export const STEPS = [
-  // { to: 4, release: '1.1', up: (d) => ({ ...d, version: 4, items: d.items.map(…) }) },
+  {
+    to: 4,
+    release: '1.1',
+    up: (d) => ({
+      ...d,
+      version: 4,
+      items: d.items.map((it) => ({
+        ...it,
+        // Richtung war bisher nur im Zieltyp versteckt: ein Höchstwert heißt
+        // „weniger ist besser“. Ohne Ziel bleibt es beim bisherigen Verhalten.
+        direction: lastGoalType(it.countGoals) === 'max' ? 'down' : 'up',
+        gapGoals: [],   // Mindestabstand zwischen Einträgen, neu in 1.1
+        pauses: [],     // Zeiträume, in denen das Item ausgesetzt ist
+      })),
+    }),
+  },
 ];
+
+/** Zieltyp des letzten gesetzten Zählziels („max“/„min“) oder null. */
+function lastGoalType(countGoals) {
+  let type = null;
+  for (const g of Array.isArray(countGoals) ? countGoals : []) if (g && g.value != null) type = g.type;
+  return type;
+}
 
 /** Version, die der Code gerade schreibt. */
 export const DATA_VERSION = STEPS.length ? STEPS[STEPS.length - 1].to : BASE_VERSION;
