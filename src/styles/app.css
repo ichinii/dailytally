@@ -17,8 +17,7 @@
   --chart-h: 150px;
   --chart-axis-w: 40px;
   --chart-min-step: 8px;
-  --counter-w: 64px; /* feste Breite: Zahl 0–99 und „Eintrag/Einträge“ verschieben nichts */
-  --counter-w-goal: 96px; /* dasselbe mit Ziel („99/100“): breiter, aber ebenso fest */
+  --counter-w: 96px; /* feste Breite für alle Items, mit und ohne Ziel: weder „99“ noch „99/100“ verschiebt die Knöpfe, und Plus und Minus stehen überall gleich weit auseinander */
   --gutter-l: max(var(--space-4), env(safe-area-inset-left, 0px));
   --gutter-r: max(var(--space-4), env(safe-area-inset-right, 0px));
 }
@@ -134,8 +133,6 @@ button { -webkit-tap-highlight-color: transparent; }
 .dt-counter__value:hover { background: var(--paper-raised); }
 .dt-counter__num { display: block; width: 100%; text-align: center; font-size: 32px; line-height: 34px; font-weight: 700; font-variant-numeric: tabular-nums; font-variation-settings: "BNCE" 0, "INFM" 30; }
 .dt-counter__lbl { width: 100%; text-align: center; white-space: nowrap; font-size: 13px; line-height: 16px; color: var(--ink-muted); text-decoration: underline dotted; text-underline-offset: 3px; }
-/* Zähler mit Ziel („5/8“) braucht mehr Platz – aber wieder fest, sonst wandern die Knöpfe */
-.dt-counter__value--wide { width: var(--counter-w-goal); }
 .dt-counter__num--pair { white-space: nowrap; }
 .dt-counter__of { font-size: 18px; line-height: 18px; font-weight: 650; color: var(--ink-muted); }
 /* Über dem Höchstwert: Farbe zusätzlich zur Marke „überschritten“ in der Zielzeile */
@@ -144,6 +141,16 @@ button { -webkit-tap-highlight-color: transparent; }
 
 /* Aufklappbarer Abschnitt im Item-Sheet: hält die Tippfelder im Ausgangszustand oben */
 .dt-fold { display: grid; gap: var(--space-2); }
+/* Beide Pausen-Einstellungen in einem Raster: Beschriftungen und Schalter stehen
+   spaltenbündig untereinander, Hinweis bzw. Eingaben in einer eigenen Zeile.
+   So wandert kein Schalter, wenn der Hinweis einer Eingabe Platz macht. */
+.dt-pause-grid { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: var(--space-2); row-gap: 6px; }
+.dt-pause-grid > .kl-field__label { margin: 0; }
+.dt-pause-grid__sub {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+  min-height: 24px; margin-bottom: var(--space-2);
+}
+.dt-pause-grid .kl-toggle { min-height: 36px; }
 .dt-fold__head {
   display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 44px; padding: 0;
   font: inherit; color: var(--ink); background: transparent; border: 0; text-align: left; cursor: pointer;
@@ -220,17 +227,14 @@ html.dt-scroll-locked, html.dt-scroll-locked body { overflow: hidden; overscroll
 .dt-sheet__actions { display: flex; gap: var(--space-3); }
 .dt-sheet__actions > * { flex: 1; }
 .dt-row-field { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 44px; }
-.dt-goal-row, .dt-pause-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.dt-goal-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .dt-goal-row { flex-wrap: nowrap; }
 .dt-goal-row .kl-tabs { flex: 0 1 auto; min-width: 0; }
 .dt-goal-row .kl-tab { padding: 0 var(--space-2); }
 .dt-goal-row .dt-num { width: 58px; flex: none; }
 .dt-num { width: 64px; min-width: 0; text-align: center; font-variant-numeric: tabular-nums; }
 .dt-toggle-only { min-height: 44px; }
-.dt-pause-row { flex-wrap: nowrap; }
-.dt-pause-label { margin-right: var(--space-1); }
-.dt-pause-hint { min-width: 0; }
-.dt-pause-row .dt-num { width: 56px; flex: none; }
+.dt-pause-grid__sub .dt-num { width: 56px; flex: none; }
 .dt-history { display: grid; gap: 2px; padding: var(--space-3); background: var(--paper-raised); border: var(--stroke-hair) solid var(--line); border-radius: var(--kl-wobble-md); }
 .dt-ask, .dt-confirm { display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--kl-wobble-md); }
 .dt-ask { background: var(--tint-butter); }

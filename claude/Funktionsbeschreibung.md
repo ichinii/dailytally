@@ -100,11 +100,11 @@ Ein Item wird über einen Hinzufügen-Knopf unter der Liste angelegt (bei leerer
 | --- | --- | --- |
 | Name | ja | Text, max. 40 Zeichen (Hinweis ab 30 Zeichen) |
 | Zeitraum | ja | pro Tag / pro Woche / pro Monat; nach dem Anlegen nicht mehr änderbar (im Bearbeiten-Modus als Marke mit Hinweis) |
-| Zählziel | nein | „kein“ / „höchstens“ / „mindestens“ + ganze Zahl ≥ 1 (Vorschlag 10 bzw. 3) |
-| Pausenziel | nein | Schalter + Dauer in Stunden und Minuten (Vorschlag 12 h); nur bei Tages-Items angeboten |
+| Zählziel | nein | „kein“ / „mindestens“ / „höchstens“ + ganze Zahl ≥ 1 (Vorschlag 3 bzw. 10) |
+| Pausenziel | nein | Schalter + Dauer in Stunden und Minuten (Vorschlag 12 h); nur bei Tages-Items angeboten. Tagesziel: einmal am Tag so lange kein Eintrag, z. B. über Nacht |
 | Mindestabstand | nein | Schalter + Dauer in Stunden und Minuten (Vorschlag 1 h); bei jedem Zeitraum angeboten. Gemeint ist der Abstand zwischen zwei Einträgen, unabhängig vom Pausenziel – beides darf gleichzeitig gesetzt sein |
 
-Pausenziel und Mindestabstand liegen hinter der aufklappbaren Zeile **„Pausen“**. Sie ist zugeklappt, solange keines von beiden gesetzt ist, und nennt dann „aus“; sonst klappt sie auf und zeigt in der Kopfzeile die gesetzten Werte. Grund: so bleiben im Ausgangszustand alle Tippfelder in der oberen Bildschirmhälfte.
+Pausenziel und Mindestabstand liegen hinter der aufklappbaren Zeile **„Pausen“**, als zweispaltiges Raster: Beschriftungen in einer Spalte, Schalter in der anderen, Hinweis bzw. Eingaben in einer eigenen Zeile darunter – so wandert kein Schalter, wenn der Hinweis den Eingaben Platz macht. Sie ist zugeklappt, solange keines von beiden gesetzt ist, und nennt dann „aus“; sonst klappt sie auf und zeigt in der Kopfzeile die gesetzten Werte. Grund: so bleiben im Ausgangszustand alle Tippfelder in der oberen Bildschirmhälfte.
 
 **Zielbewertung** (gilt überall in der App)
 
@@ -198,9 +198,10 @@ Die Hauptansicht besteht aus einem wischbaren Wochenstreifen zur Tagesauswahl un
 
 **Pausen-Zähler** (nur Tages-Items mit Pausenziel, nur wenn heute gewählt ist)
 
-- Zeigt die laufende Pause seit dem letzten Eintrag: „Pause seit 9 h 40 min“, das Ziel und den Fortschritt dazu. Ist das Ziel erreicht, läuft der Zähler weiter und zeigt „Ziel erreicht“.
-- Aktualisiert sich mindestens jede Minute.
-- Die laufende Pause ist nur bekannt, wenn der neueste Eintrag des Items eine Uhrzeit hat und zwischen dessen Tag und heute kein Tag mit einem Eintrag ohne Uhrzeit liegt. Sonst zeigt der Zähler „Pause unbekannt“ mit dem Grund („Der letzte Eintrag hat keine Uhrzeit.“ bzw. „Noch kein Eintrag mit Uhrzeit.“), statt eine Zahl zu erfinden.
+- Das Pausenziel ist ein **Tagesziel, das einmal am Tag erreicht werden soll**. Sobald die längste Pause des Tages das Ziel erreicht hat, steht dort „Ziel erreicht“ samt „Längste Pause heute: 13 h“ – und das bleibt für den Rest des Tages so, auch wenn danach wieder gezählt wird. Eine neu begonnene Pause steht dann nur noch leise daneben („läuft seit 5 min“).
+  Grund: Die Pause gehört zu dem Tag, an dem sie endet. Vorher zeigte die Karte die *laufende* Pause gegen das Ziel, also stand nach dem ersten Eintrag am Morgen wieder ein unerfülltes Ziel da und die Belohnung für die Nacht war weg.
+- Ist das Tagesziel noch nicht erreicht, steht dort die laufende Pause mit Ziel und Fortschritt („Pause seit 3 h 32 min“, „Ziel 12 h“).
+- Hat der letzte Eintrag keine Uhrzeit oder gibt es keinen, steht „Pause unbekannt“ samt Grund – die Pause wird nie geschätzt.
 
 ## Verlauf (Übersicht)
 
@@ -330,7 +331,8 @@ Erfüllt in Handy-Breite und im sandboxed iframe, ohne Fehler in der Konsole. `[
 - [x] „Mindestens 3“ zeigt genauso „2/3“; ohne Ziel steht die nackte Zahl.
 - [x] Über dem Höchstwert färbt sich die Zahl, genau am Limit nicht; die Marke „überschritten“ bleibt in der Zielzeile.
 - [x] Die Knöpfe verschieben sich nicht, wenn die Zahl von 0 auf 99 wächst – mit und ohne Ziel.
-- [x] Im Anlege-Sheet folgen die Felder in der Reihenfolge Name, Zählen pro, Zählziel, Pausen.
+- [x] Im Anlege-Sheet folgen die Felder in der Reihenfolge Name, Zählen pro, Zählziel, Pausen; die Zielreiter in der Reihenfolge kein, mindestens, höchstens.
+- [x] Plus und Minus stehen mit und ohne Zählziel gleich weit auseinander.
 
 **Track-Ansicht**
 
@@ -375,6 +377,7 @@ Erfüllt in Handy-Breite und im sandboxed iframe, ohne Fehler in der Konsole. `[
 - [x] Bei einer Migration liegt der alte Rohtext unverändert als Sicherung daneben.
 - [x] Ein Stand aus einer neueren Version wird nicht überschrieben: er liegt gesichert daneben und bleibt es auch nach dem Weiterzählen.
 - [x] Nach erstem Aufruf startet die App ohne Netz.
+- [x] Ein Build ohne PWA (Vorschau, Entwicklungsserver) registriert keinen Service Worker.
 
 ## Nicht enthalten und offen
 

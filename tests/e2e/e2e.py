@@ -392,11 +392,13 @@ def test_pauses():
         pg.clock.set_fixed_time(t(2026, 10, 17, 11, 0))
         pg.evaluate("document.dispatchEvent(new Event('visibilitychange'))"); pg.wait_for_timeout(200)
         txt = card(pg, 'Zigaretten').locator('[data-testid=pause]').inner_text()
-        check('Um 11:00 „Ziel erreicht“, Zähler läuft weiter', 'Pause seit 12 h' in txt and 'Ziel erreicht' in txt, txt)
+        check('Um 11:00 ist das Tagesziel erreicht', 'Ziel erreicht' in txt and 'Längste Pause heute: 12 h' in txt, txt)
         card(pg, 'Zigaretten').get_by_role('button', name='Eintrag hinzufügen').click(); pg.wait_for_timeout(200)
         check('Plus beendet die Pause und zeigt ihre Dauer', pg.locator('.kl-toast', has_text='Pause beendet: 12 h').count() == 1, pg.locator('.kl-toast').inner_text())
         txt = card(pg, 'Zigaretten').locator('[data-testid=pause]').inner_text()
-        check('Neue Pause beginnt bei 0', 'Pause seit 0 min' in txt, txt)
+        # Die laufende Pause beginnt bei 0, das erreichte Tagesziel bleibt aber stehen.
+        check('Neue Pause beginnt bei 0, Tagesziel bleibt erreicht',
+              'läuft seit 0 min' in txt and 'Ziel erreicht' in txt, txt)
         b.close()
     with sync_playwright() as p:
         b, ctx = new_ctx(p)
@@ -571,6 +573,16 @@ def test_iframes():
 
 def test_offline():
     with sync_playwright() as p:
+        # Build ohne PWA registriert nichts: am Entwicklungsserver würde ein
+        # Service Worker die Module abfangen und das Neuladen brechen.
+        b, ctx = new_ctx(p)
+        pg = ctx.new_page()
+        pg.goto(ROOT + 'dist-single/index.html')
+        pg.wait_for_selector('.kl-app'); pg.wait_for_timeout(500)
+        regs = pg.evaluate("async () => (await navigator.serviceWorker.getRegistrations()).map((r) => r.scope)")
+        check('Build ohne PWA registriert keinen Service Worker', regs == [], regs)
+        b.close()
+
         b, ctx = new_ctx(p)
         pg = ctx.new_page()
         pg.on('pageerror', lambda e: CONSOLE.append(f'[offline] PAGEERROR: {e}'))
@@ -968,6 +980,10 @@ def test_count():
         check('Der Zähler bleibt maschinell lesbar', value(pg, 'Zigaretten') == 5)
         check('Mit Mindestwert genauso', num(pg, 'Sport') == '2/3', num(pg, 'Sport'))
         check('Ohne Ziel bleibt es die nackte Zahl', num(pg, 'Ohne Ziel') == '0')
+        box = lambda name, btn: card(pg, name).get_by_role('button', name=btn).bounding_box()
+        gap_with = box('Zigaretten', 'Eintrag hinzufügen')['x'] - (box('Zigaretten', 'Letzten Eintrag entfernen')['x'])
+        gap_without = box('Ohne Ziel', 'Eintrag hinzufügen')['x'] - (box('Ohne Ziel', 'Letzten Eintrag entfernen')['x'])
+        check('Plus und Minus stehen mit und ohne Ziel gleich weit auseinander', gap_with == gap_without, (gap_with, gap_without))
         check('Im Rahmen ist die Zahl nicht gefärbt', 'is-over' not in (card(pg, 'Zigaretten').locator('[data-testid=count]').get_attribute('class') or ''))
         # Über das Limit zählen
         for _ in range(4):
@@ -992,6 +1008,8 @@ def test_count():
               == ['Name', 'Zählen pro', 'Zählziel', 'Pausen'],
               pg.locator('.dt-sheet__body .kl-field__label').all_inner_texts())
         check('Keine Richtungs-Wahl', pg.get_by_role('tab', name='weniger ist besser').count() == 0 and pg.get_by_role('tab', name='mehr ist besser').count() == 0)
+        tabs = pg.locator('.dt-goal-row .kl-tab').all_inner_texts()
+        check('Zielreiter in der Reihenfolge kein, mindestens, höchstens', tabs == ['kein', 'mindestens', 'höchstens'], tabs)
         pg.get_by_test_id('save').click(); pg.wait_for_timeout(450)
         check('Angelegtes Item hat keine Richtung mehr', 'direction' not in stored(pg)['items'][0], stored(pg)['items'][0])
         b.close()
@@ -1032,6 +1050,18 @@ def test_gap():
         check('Eintrag ohne Uhrzeit: Abstand unbekannt mit Grund', 'Abstand unbekannt' in txt and 'keine Uhrzeit' in txt, txt)
         b.close()
 
+        # Tages-Item: beide Einstellungen stehen spaltenbündig untereinander
+        b, ctx = new_ctx(p)
+        pg = page(ctx, data([item('z', 'Zigaretten')]), now=NOW, label='gap3b')
+        card(pg, 'Zigaretten').locator('.dt-item__name').click(); pg.wait_for_timeout(450)
+        pg.get_by_role('button', name='Pausen').click(); pg.wait_for_timeout(250)
+        tr = lambda which: pg.locator(f'label.kl-toggle:has(#dt-{which}-on) .kl-toggle__track').bounding_box()
+        lb = lambda which: pg.locator(f'#dt-{which}-label').bounding_box()
+        check('Beide Schalter in derselben Spalte', tr('pause')['x'] == tr('gap')['x'], (tr('pause'), tr('gap')))
+        check('Beide Beschriftungen in derselben Spalte', lb('pause')['x'] == lb('gap')['x'], (lb('pause'), lb('gap')))
+        check('Hinweistexte ohne „Aus.“ davor', 'Aus.' not in pg.locator('.dt-pause-grid').inner_text(), pg.locator('.dt-pause-grid').inner_text())
+        b.close()
+
         # Einstellen im Sheet: Abschnitt ist zugeklappt, bis etwas gesetzt ist
         b, ctx = new_ctx(p)
         pg = page(ctx, data([item('s', 'Sport', period='week')]), now=NOW, label='gap4')
@@ -1042,8 +1072,12 @@ def test_gap():
         check('Kein Eingabefeld des Abschnitts im Weg', pg.locator('#dt-gap-on').count() == 0)
         fold.click(); pg.wait_for_timeout(200)
         check('Aufgeklappt: Mindestabstand auch bei Wochen-Items', pg.locator('#dt-gap-on').count() == 1 and pg.locator('#dt-pause-on').count() == 0)
-        # Das Kästchen selbst ist versteckt; getippt wird die Spur des Schalters.
-        pg.locator('label.kl-toggle:has(#dt-gap-on)').click(); pg.wait_for_timeout(100)
+        # Der Schalter darf nicht wandern, wenn der Hinweis den Eingaben Platz macht
+        track = lambda which: pg.locator(f'label.kl-toggle:has(#dt-{which}-on) .kl-toggle__track').bounding_box()
+        before = track('gap')
+        pg.locator('label.kl-toggle:has(#dt-gap-on)').click(); pg.wait_for_timeout(150)
+        after = track('gap')
+        check('Einschalten verschiebt den Schalter nicht', (before['x'], before['y']) == (after['x'], after['y']), (before, after))
         pg.locator('#dt-gap-h').fill('0'); pg.locator('#dt-gap-m').fill('90')
         pg.get_by_test_id('save').click(); pg.wait_for_timeout(200)
         check('Mehr als 59 Minuten wird abgelehnt', pg.locator('.dt-sheet .kl-field__error').count() >= 1)
@@ -1146,6 +1180,38 @@ def test_about():
         check('Die App navigiert nicht selbst weg', pg.url.endswith('index.html'), pg.url)
         b.close()
 
+# ------------------------------------------------------------------ Pausenziel bleibt erreicht
+def test_pause_day():
+    pause = lambda pg, name: card(pg, name).locator('[data-testid=pause]').inner_text()
+    with sync_playwright() as p:
+        b, ctx = new_ctx(p)
+        # Nacht von 20:00 bis 09:00 = 13 h, Ziel 12 h: heute geschafft
+        d = data([item('z', 'Zigaretten', created='2026-10-10', pause_goals=[{'from': '2026-10-10', 'minutes': 720}])],
+                 [{'id': 'a', 'itemId': 'z', 'day': '2026-10-16', 'ts': ms(t(2026, 10, 16, 20, 0))},
+                  {'id': 'b', 'itemId': 'z', 'day': '2026-10-17', 'ts': ms(t(2026, 10, 17, 9, 0))}])
+        pg = page(ctx, d, now=NOW, label='pauseday')
+        txt = pause(pg, 'Zigaretten')
+        check('Erreichtes Tagesziel bleibt erreicht', 'Ziel erreicht' in txt and 'Längste Pause heute: 13 h' in txt, txt)
+        check('Kein Fortschrittsbalken mehr, wenn der Tag geschafft ist',
+              card(pg, 'Zigaretten').locator('[data-testid=pause] [role=progressbar], [data-testid=pause] .kl-bar').count() == 0)
+        # Ein neuer Eintrag setzt die laufende Pause zurück - das Tagesziel bleibt
+        card(pg, 'Zigaretten').get_by_role('button', name='Eintrag hinzufügen').click(); pg.wait_for_timeout(400)
+        txt = pause(pg, 'Zigaretten')
+        check('Neuer Eintrag nimmt die Belohnung nicht weg', 'Ziel erreicht' in txt and 'Längste Pause heute: 13 h' in txt, txt)
+        check('Die laufende Pause steht leise daneben', 'läuft seit' in txt, txt)
+        b.close()
+
+        # Noch nicht geschafft: Fortschritt zum Ziel wie bisher
+        b, ctx = new_ctx(p)
+        d2 = data([item('z', 'Zigaretten', created='2026-10-10', pause_goals=[{'from': '2026-10-10', 'minutes': 720}])],
+                  [{'id': 'a', 'itemId': 'z', 'day': '2026-10-17', 'ts': ms(t(2026, 10, 17, 6, 0))},
+                   {'id': 'b', 'itemId': 'z', 'day': '2026-10-17', 'ts': ms(t(2026, 10, 17, 11, 0))}])
+        pg = page(ctx, d2, now=NOW, label='pauseday2')
+        txt = pause(pg, 'Zigaretten')
+        check('Ohne erreichtes Ziel steht die laufende Pause mit Ziel', 'Pause seit 3 h 32 min' in txt and 'Ziel 12 h' in txt, txt)
+        check('Mit Fortschrittsbalken', card(pg, 'Zigaretten').locator('[data-testid=pause] .kl-bar, [data-testid=pause] [role=progressbar]').count() >= 1)
+        b.close()
+
 for name, fn in [('items', test_create_and_sheet), ('drag', test_sheet_drag), ('goals', test_goal_eval_and_history),
                  ('plus', test_plus_minus), ('strip', test_strip), ('times', test_day_boundary_and_times),
                  ('pauses', test_pauses), ('overview', test_overview), ('perf', test_overview_perf),
@@ -1156,7 +1222,8 @@ for name, fn in [('items', test_create_and_sheet), ('drag', test_sheet_drag), ('
                  ('count', test_count),
                  ('gap', test_gap),
                  ('off', test_off),
-                 ('about', test_about)]:
+                 ('about', test_about),
+                 ('pauseday', test_pause_day)]:
     run(name, fn)
 
 print('\n==== ', sum(1 for r in RESULTS if r[1]), 'von', len(RESULTS), 'bestanden')

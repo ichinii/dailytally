@@ -127,7 +127,7 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
             {name.length >= 30 && <span className="kl-field__hint" id="dt-name-hint">{T.nameHint(name.length)}</span>}
           </div>
 
-          <div className="dt-row-field">
+          <div className="kl-field">
             <span className="kl-field__label" id="dt-period-label">{T.period}</span>
             {editing
               ? <Tag tint="sky" icon="calendar">{T.periodTab[item.period]}</Tag>
@@ -140,7 +140,7 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
             <div className="dt-goal-row">
               <Tabs label={T.countGoal} value={goalType}
                 onChange={(v) => { setGoalType(v); if (v !== 'none' && !goalValue) setGoalValue(v === 'max' ? '10' : '3'); }}
-                items={[{ id: 'none', label: T.goalNone }, { id: 'max', label: T.goalMax }, { id: 'min', label: T.goalMin }]} />
+                items={[{ id: 'none', label: T.goalNone }, { id: 'min', label: T.goalMin }, { id: 'max', label: T.goalMax }]} />
               {goalType !== 'none' && (
                 <input
                   id="dt-goal-value" className="kl-input dt-num" inputMode="numeric" value={goalValue} aria-label={T.goalValueLabel}
@@ -171,17 +171,17 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
             </button>
 
             {foldOpen && (
-              <>
+              <div className="dt-pause-grid">
                 {period === 'day' && (
-                  <div className="kl-field">
-                    <div className="dt-pause-row">
-                      <span className="kl-field__label dt-pause-label">{T.pauseGoalLabel}</span>
-                      <label className="kl-toggle dt-toggle-only">
-                        <span className="dt-sr">{T.pauseToggle}</span>
-                        <input type="checkbox" role="switch" checked={pauseOn} onChange={(e) => setPauseOn(e.target.checked)} id="dt-pause-on" />
-                        <span className="kl-toggle__track" aria-hidden="true" />
-                      </label>
-                      {pauseOn && (
+                  <>
+                    <span className="kl-field__label" id="dt-pause-label">{T.pauseGoalLabel}</span>
+                    <label className="kl-toggle dt-toggle-only">
+                      <span className="dt-sr">{T.pauseToggle}</span>
+                      <input type="checkbox" role="switch" checked={pauseOn} onChange={(e) => setPauseOn(e.target.checked)} id="dt-pause-on" />
+                      <span className="kl-toggle__track" aria-hidden="true" />
+                    </label>
+                    <div className="dt-pause-grid__sub">
+                      {pauseOn ? (
                         <>
                           <input id="dt-pause-h" className="kl-input dt-num" inputMode="numeric" value={pauseH} aria-label={T.hoursLabel}
                             aria-invalid={tried && !pauseOk ? 'true' : undefined} enterKeyHint="done"
@@ -192,38 +192,34 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
                             onChange={(e) => setPauseM(e.target.value.replace(/[^\d]/g, '').slice(0, 2))} onKeyDown={onEnter(close)} />
                           <span>{T.minutes}</span>
                         </>
-                      )}
-                      {!pauseOn && <span className="kl-muted dt-small dt-pause-hint">{T.pauseHint}</span>}
+                      ) : <span className="kl-muted dt-small">{T.pauseHint}</span>}
                     </div>
-                    {tried && !pauseOk && <span className="kl-field__error">{T.pauseError}</span>}
-                  </div>
+                    {tried && !pauseOk && <span className="kl-field__error dt-pause-grid__sub">{T.pauseError}</span>}
+                  </>
                 )}
 
-                <div className="kl-field">
-                  <div className="dt-pause-row">
-                    <span className="kl-field__label dt-pause-label">{T.gapGoalLabel}</span>
-                    <label className="kl-toggle dt-toggle-only">
-                      <span className="dt-sr">{T.gapToggle}</span>
-                      <input type="checkbox" role="switch" checked={gapOn} onChange={(e) => setGapOn(e.target.checked)} id="dt-gap-on" />
-                      <span className="kl-toggle__track" aria-hidden="true" />
-                    </label>
-                    {gapOn && (
-                      <>
-                        <input id="dt-gap-h" className="kl-input dt-num" inputMode="numeric" value={gapH} aria-label={T.hoursLabel}
-                          aria-invalid={tried && !gapOk ? 'true' : undefined} enterKeyHint="done"
-                          onChange={(e) => setGapH(e.target.value.replace(/[^\d]/g, '').slice(0, 3))} onKeyDown={onEnter(close)} />
-                        <span>{T.hours}</span>
-                        <input id="dt-gap-m" className="kl-input dt-num" inputMode="numeric" value={gapM} aria-label={T.minutesLabel}
-                          aria-invalid={tried && !gapOk ? 'true' : undefined} enterKeyHint="done"
-                          onChange={(e) => setGapM(e.target.value.replace(/[^\d]/g, '').slice(0, 2))} onKeyDown={onEnter(close)} />
-                        <span>{T.minutes}</span>
-                      </>
-                    )}
-                    {!gapOn && <span className="kl-muted dt-small dt-pause-hint">{T.gapHint}</span>}
-                  </div>
-                  {tried && !gapOk && <span className="kl-field__error">{T.gapError}</span>}
+                <span className="kl-field__label" id="dt-gap-label">{T.gapGoalLabel}</span>
+                <label className="kl-toggle dt-toggle-only">
+                  <span className="dt-sr">{T.gapToggle}</span>
+                  <input type="checkbox" role="switch" checked={gapOn} onChange={(e) => setGapOn(e.target.checked)} id="dt-gap-on" />
+                  <span className="kl-toggle__track" aria-hidden="true" />
+                </label>
+                <div className="dt-pause-grid__sub">
+                  {gapOn ? (
+                    <>
+                      <input id="dt-gap-h" className="kl-input dt-num" inputMode="numeric" value={gapH} aria-label={T.hoursLabel}
+                        aria-invalid={tried && !gapOk ? 'true' : undefined} enterKeyHint="done"
+                        onChange={(e) => setGapH(e.target.value.replace(/[^\d]/g, '').slice(0, 3))} onKeyDown={onEnter(close)} />
+                      <span>{T.hours}</span>
+                      <input id="dt-gap-m" className="kl-input dt-num" inputMode="numeric" value={gapM} aria-label={T.minutesLabel}
+                        aria-invalid={tried && !gapOk ? 'true' : undefined} enterKeyHint="done"
+                        onChange={(e) => setGapM(e.target.value.replace(/[^\d]/g, '').slice(0, 2))} onKeyDown={onEnter(close)} />
+                      <span>{T.minutes}</span>
+                    </>
+                  ) : <span className="kl-muted dt-small">{T.gapHint}</span>}
                 </div>
-              </>
+                {tried && !gapOk && <span className="kl-field__error dt-pause-grid__sub">{T.gapError}</span>}
+              </div>
             )}
           </div>
 

@@ -216,6 +216,12 @@ select.kl-input { padding-right: 36px; background-image: none; }
   font: inherit; font-size: 15px; font-weight: 600; font-variation-settings: var(--kl-hand-loud); color: var(--ink-muted);
   background: transparent; border: 0; border-radius: var(--kl-wobble-sm); cursor: pointer; white-space: nowrap;
 }
+/* Nicht gewählte Reiter zeigen beim Zeigen, dass sie anfassbar sind. Nur bei
+   echtem Zeigegerät: auf dem Handy bleibt ein Tipp sonst als Zustand hängen. */
+@media (hover: hover) and (pointer: fine) {
+  .kl-tab:hover { color: var(--ink); background: var(--paper); }
+  .kl-tab[aria-selected="true"]:hover { background: transparent; }
+}
 .kl-tab[aria-selected="true"] { color: var(--ink); }
 .kl-tab[aria-selected="true"]::before {
   content: ""; position: absolute; z-index: -1; inset: 4px 2px;

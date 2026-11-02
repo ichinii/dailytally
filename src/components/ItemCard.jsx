@@ -3,7 +3,7 @@ import { Button, Card, Icon, Mark, Tag } from '../kladde/kladde.js';
 import Bar from './Bar.jsx';
 import { evaluate } from '../lib/goals.js';
 import { formatDuration } from '../lib/days.js';
-import { gapBreaks, runningPause } from '../lib/stats.js';
+import { dailyPauses, gapBreaks, runningPause } from '../lib/stats.js';
 import { useNow } from '../lib/ui.js';
 import { T } from '../strings.js';
 
@@ -16,9 +16,28 @@ function GoalStatus({ goal, value }) {
   return null;
 }
 
+/**
+ * Pausenziel: ein Tagesziel, das einmal am Tag erreicht werden soll. Sobald die
+ * längste Pause des Tages das Ziel erreicht hat, bleibt der Tag geschafft – sonst
+ * stünde nach dem ersten Eintrag am Morgen wieder ein unerfülltes Ziel da und die
+ * Belohnung für die Nacht wäre weg.
+ */
 function PauseRow({ r, today, goalMinutes, label, tint }) {
   const now = useNow(20000); // mindestens jede Minute
   const p = runningPause(r, today, now);
+  const best = dailyPauses(r, today, today, now)[0];
+  if (best != null && best >= goalMinutes) {
+    const running = p.known && Math.floor(p.minutes) < Math.floor(best);
+    return (
+      <div className="dt-pause" data-testid="pause">
+        <div className="dt-pause__line">
+          <span className="dt-pause__text"><Icon name="check" size={18} /> {T.pauseBestToday(formatDuration(best))}</span>
+          <Tag tone="success">{T.pauseReached}</Tag>
+        </div>
+        {running && <span className="kl-muted dt-small">{T.pauseStillRunning(formatDuration(p.minutes))}</span>}
+      </div>
+    );
+  }
   if (!p.known) {
     return (
       <div className="dt-pause" data-testid="pause">
@@ -30,12 +49,11 @@ function PauseRow({ r, today, goalMinutes, label, tint }) {
       </div>
     );
   }
-  const reached = p.minutes >= goalMinutes;
   return (
     <div className="dt-pause" data-testid="pause">
       <div className="dt-pause__line">
         <span className="dt-pause__text"><Icon name="clock" size={18} /> {T.pauseSince(formatDuration(p.minutes))}</span>
-        {reached ? <Tag tone="success">{T.pauseReached}</Tag> : <span className="kl-muted dt-small">{T.pauseGoal(formatDuration(goalMinutes))}</span>}
+        <span className="kl-muted dt-small">{T.pauseGoal(formatDuration(goalMinutes))}</span>
       </div>
       <Bar value={p.minutes} max={goalMinutes} label={T.pauseProgressLabel(label)} tint={tint} />
     </div>
@@ -105,7 +123,7 @@ function ItemCard({ item, tint, refLabel, value, goal, pauseGoal, gapGoal, showP
         <div className="dt-counter">
           <Button icon="minus" label={T.minus} onClick={() => onMinus(item.id)} disabled={value === 0 || dayPaused} />
           <button
-            type="button" className={'dt-counter__value' + (goal ? ' dt-counter__value--wide' : '')}
+            type="button" className="dt-counter__value"
             onClick={() => onOpenEntries(item.id)}
             aria-label={goal ? T.valueOpen(value, goal.value) : T.entriesOpen(value)}
           >

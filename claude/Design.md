@@ -242,6 +242,10 @@ Icon, Mark, Button (primary · secondary · ghost · danger · fab), Card, Check
 - **Export-Sheet:** zwei gleichwertige Wege, „Datei speichern“ (primary) und „Kopieren“ (secondary). Darunter leise „Als Text anzeigen“: markierbares Monospace-Feld, falls Download und Zwischenablage blockiert sind.
 - **Import-Sheet:** „Datei wählen“ (primary, volle Breite) oder „Oder Text einfügen“ (Textfeld, Monospace) plus „Text prüfen“. Danach folgt immer eine Nachfrage mit Zahlen („… durch 5 Items und 1 234 Einträge ersetzen?“) und dem erkannten Format.
 
+### 9.10a Reiter (`Tabs`)
+
+- Nicht gewählte Reiter bekommen bei echtem Zeigegerät (`@media (hover: hover) and (pointer: fine)`) beim Zeigen `paper` als Fläche und `ink` als Schrift. Auf Touch-Geräten absichtlich nicht, sonst bleibt der Zustand nach einem Tipp hängen. Der gewählte Reiter behält seinen Textmarker und ändert sich beim Zeigen nicht.
+
 ### 9.11a Abschnitt „Über“ im Menü
 
 - Eigene `paper`-Karte unter den Daten-Abschnitten: `kl-list` mit „Version 1.1“ (butter, sparkle; Meta nennt das Datenformat) und „Problem melden“ (peach, alert, führt zu GitHub). Die Versionszeile ist keine Aktion und hat deshalb keinen Pfeil.

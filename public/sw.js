@@ -56,11 +56,17 @@ self.addEventListener('fetch', (e) => {
   }
   // Dateien mit Hash im Namen: Cache zuerst, sonst Netz und merken.
   e.respondWith((async () => {
-    const cache = await caches.open(CACHE);
-    const hit = await cache.match(req, { ignoreSearch: true });
-    if (hit) return hit;
-    const res = await fetch(req);
-    if (res.ok) cache.put(req, res.clone());
-    return res;
+    try {
+      const cache = await caches.open(CACHE);
+      const hit = await cache.match(req, { ignoreSearch: true });
+      if (hit) return hit;
+      const res = await fetch(req);
+      if (res.ok) cache.put(req, res.clone()).catch(() => {});
+      return res;
+    } catch {
+      // Lieber ohne Zwischenspeicher weiterreichen als die Anfrage scheitern
+      // lassen: sonst steht im Fehlerprotokoll der Service Worker statt der Ursache.
+      return fetch(req);
+    }
   })());
 });
