@@ -64,11 +64,10 @@ def visible_days(pg):
 def strip_state(pg):
     return pg.evaluate("""() => { const el=document.querySelector('[data-testid=week-scroller]'); return {left: el.scrollLeft, w: el.clientWidth, max: el.scrollWidth-el.clientWidth, month: document.querySelector('.dt-strip__month').textContent}; }""")
 
-def item(id_, label, period='day', created='2026-10-01', goals=None, pause_goals=None, gaps=None, direction=None):
+def item(id_, label, period='day', created='2026-10-01', goals=None, pause_goals=None, gaps=None):
     it = {'id': id_, 'label': label, 'period': period, 'createdDay': created,
           'countGoals': goals or [], 'pauseGoals': pause_goals or []}
     if gaps is not None: it['gapGoals'] = gaps
-    if direction is not None: it['direction'] = direction
     return it
 
 def data(items, entries=(), version=3):
@@ -952,63 +951,49 @@ def test_migration():
               len(bak) == 1 and pg.locator('article.dt-item').count() == 0, keys(pg))
         b.close()
 
-# ------------------------------------------------------------------ Richtung der großen Zahl
-def test_direction():
-    hero = lambda pg, name: card(pg, name).locator('[data-testid=hero]').inner_text()
+# ------------------------------------------------------------------ Zähler mit Ziel („5/8“)
+def test_count():
+    num = lambda pg, name: card(pg, name).locator('[data-testid=count]').inner_text().replace('\n', '')
     with sync_playwright() as p:
         b, ctx = new_ctx(p)
         d = data(
             [item('z', 'Zigaretten', goals=[{'from': '2026-10-01', 'type': 'max', 'value': 8}]),
-             item('o', 'Ohne Limit'),
+             item('o', 'Ohne Ziel'),
              item('s', 'Sport', period='week', goals=[{'from': '2026-10-12', 'type': 'min', 'value': 3}])],
-            entries_n('z', '2026-10-17', 5, ts=ms(t(2026, 10, 17, 12, 0))) + entries_n('s', '2026-10-15', 2),
+            entries_n('z', '2026-10-17', 5) + entries_n('s', '2026-10-15', 2),
         )
-        pg = page(ctx, d, now=NOW, label='dir')
-        # Höchstwert → weniger ist besser: Restbudget groß, Zähler klein daneben.
-        check('Limit-Item zeigt groß das Restbudget', hero(pg, 'Zigaretten') == '3')
-        check('Beschriftung nennt das Limit', card(pg, 'Zigaretten').locator('.dt-counter__lbl').inner_text() == 'noch von 8')
-        check('Der Zähler bleibt als zweite Zeile sichtbar', value(pg, 'Zigaretten') == 5)
-        # Mindestwert → mehr ist besser: unverändert der Zähler.
-        check('Mindest-Item zeigt groß den Zähler', value(pg, 'Sport') == 2 and card(pg, 'Sport').locator('[data-testid=hero]').count() == 0)
-        check('Mindest-Item ohne zweite Zeile', card(pg, 'Sport').locator('.dt-counter__sub').count() == 0)
-        # Ohne Ziel ist die Richtung nicht ableitbar: Vorbelegung bleibt „mehr ist besser“.
-        check('Item ohne Ziel behält den gewöhnlichen Zähler',
-              value(pg, 'Ohne Limit') == 0 and card(pg, 'Ohne Limit').locator('[data-testid=hero]').count() == 0)
-        # Plus bleibt Plus: erfassen, nicht verbrauchen.
-        card(pg, 'Zigaretten').get_by_role('button', name='Eintrag hinzufügen').click(); pg.wait_for_timeout(300)
-        check('Plus erfasst auch bei „weniger ist besser“ einen Eintrag', value(pg, 'Zigaretten') == 6 and hero(pg, 'Zigaretten') == '2')
-        card(pg, 'Zigaretten').get_by_role('button', name='Letzten Eintrag entfernen').click(); pg.wait_for_timeout(300)
-        check('Minus bleibt die Korrektur', value(pg, 'Zigaretten') == 5 and hero(pg, 'Zigaretten') == '3')
-        # Über dem Limit dreht die Beschriftung.
+        pg = page(ctx, d, now=NOW, label='count')
+        check('Mit Höchstwert steht Stand und Ziel als 5/8', num(pg, 'Zigaretten') == '5/8', num(pg, 'Zigaretten'))
+        check('Darunter steht nur „Einträge“', card(pg, 'Zigaretten').locator('.dt-counter__lbl').inner_text() == 'Einträge')
+        check('Der Zähler bleibt maschinell lesbar', value(pg, 'Zigaretten') == 5)
+        check('Mit Mindestwert genauso', num(pg, 'Sport') == '2/3', num(pg, 'Sport'))
+        check('Ohne Ziel bleibt es die nackte Zahl', num(pg, 'Ohne Ziel') == '0')
+        check('Im Rahmen ist die Zahl nicht gefärbt', 'is-over' not in (card(pg, 'Zigaretten').locator('[data-testid=count]').get_attribute('class') or ''))
+        # Über das Limit zählen
         for _ in range(4):
             card(pg, 'Zigaretten').get_by_role('button', name='Eintrag hinzufügen').click(); pg.wait_for_timeout(120)
-        check('Über dem Limit: Abstand zum Limit mit eigener Beschriftung',
-              hero(pg, 'Zigaretten') == '1' and card(pg, 'Zigaretten').locator('.dt-counter__lbl').inner_text() == 'über dem Limit', value(pg, 'Zigaretten'))
+        cls = card(pg, 'Zigaretten').locator('[data-testid=count]').get_attribute('class') or ''
+        check('Über dem Limit färbt sich die Zahl', num(pg, 'Zigaretten') == '9/8' and 'is-over' in cls, (num(pg, 'Zigaretten'), cls))
+        check('Das Wort dazu steht weiter in der Zielzeile',
+              card(pg, 'Zigaretten').locator('.kl-tag', has_text='überschritten').count() == 1)
+        card(pg, 'Zigaretten').get_by_role('button', name='Letzten Eintrag entfernen').click(); pg.wait_for_timeout(300)
+        check('Minus bleibt die Korrektur', value(pg, 'Zigaretten') == 8 and num(pg, 'Zigaretten') == '8/8')
+        check('Genau am Limit ist nicht überschritten',
+              'is-over' not in (card(pg, 'Zigaretten').locator('[data-testid=count]').get_attribute('class') or ''))
         b.close()
 
-        # Ohne Limit mit Eintrag: Dauer seit dem letzten Mal.
+        # Keine Richtungs-Frage mehr im Sheet
         b, ctx = new_ctx(p)
-        d2 = data([item('o', 'Ohne Limit')], [{'id': 'x1', 'itemId': 'o', 'day': '2026-10-17', 'ts': ms(t(2026, 10, 17, 12, 0))}])
-        pg = page(ctx, d2, now=NOW, label='dir2')
-        card(pg, 'Ohne Limit').locator('.dt-item__name').click(); pg.wait_for_timeout(450)
-        pg.get_by_role('tab', name='weniger ist besser').click(); pg.wait_for_timeout(100)
-        pg.get_by_test_id('save').click(); pg.wait_for_timeout(450)
-        check('Richtung ohne Ziel wählbar und gespeichert', stored(pg)['items'][0]['direction'] == 'down', stored(pg)['items'][0])
-        check('Ohne Limit zeigt groß die Zeit seit dem letzten Eintrag', hero(pg, 'Ohne Limit') == '2 h 32 min', hero(pg, 'Ohne Limit'))
-        check('Beschriftung nennt den Bezug', card(pg, 'Ohne Limit').locator('.dt-counter__lbl').inner_text() == 'seit dem letzten Mal')
-        b.close()
-
-        # Beim Anlegen folgt die Richtung dem Zieltyp.
-        b, ctx = new_ctx(p)
-        pg = page(ctx, now=NOW, label='dir3')
+        pg = page(ctx, now=NOW, label='count2')
         pg.get_by_role('button', name='Erstes Item anlegen').click(); pg.wait_for_timeout(450)
         pg.locator('#dt-name').fill('Neu')
-        check('Ohne Ziel wird die Richtung gefragt', pg.get_by_role('tab', name='weniger ist besser').count() == 1)
-        pg.locator('.dt-sheet').get_by_role('tab', name='höchstens').click(); pg.wait_for_timeout(100)
-        check('Mit Ziel verschwindet die Frage und wird erklärt',
-              pg.get_by_role('tab', name='weniger ist besser').count() == 0 and pg.locator('.dt-sheet', has_text='aus dem Ziel abgeleitet').count() == 1)
+        check('Reihenfolge im Sheet: Name, Zählen pro, Zählziel, Pausen',
+              [t.strip() for t in pg.locator('.dt-sheet__body .kl-field__label, .dt-sheet__body .dt-fold__head .kl-field__label').all_inner_texts()][:4]
+              == ['Name', 'Zählen pro', 'Zählziel', 'Pausen'],
+              pg.locator('.dt-sheet__body .kl-field__label').all_inner_texts())
+        check('Keine Richtungs-Wahl', pg.get_by_role('tab', name='weniger ist besser').count() == 0 and pg.get_by_role('tab', name='mehr ist besser').count() == 0)
         pg.get_by_test_id('save').click(); pg.wait_for_timeout(450)
-        check('Höchstwert legt „weniger ist besser“ an', stored(pg)['items'][0]['direction'] == 'down', stored(pg)['items'][0])
+        check('Angelegtes Item hat keine Richtung mehr', 'direction' not in stored(pg)['items'][0], stored(pg)['items'][0])
         b.close()
 
 # ------------------------------------------------------------------ Mindestabstand zwischen Einträgen
@@ -1104,15 +1089,14 @@ def test_off():
         fold = pg.locator('.dt-fold__head', has_text='Aussetzen')
         check('Aussetzen-Abschnitt zugeklappt und beschriftet', fold.get_attribute('aria-expanded') == 'false' and 'läuft normal' in fold.inner_text(), fold.inner_text())
         fold.click(); pg.wait_for_timeout(200)
-        pg.locator('#dt-off-until').fill('2026-10-20')
-        pg.get_by_test_id('off-until').click(); pg.wait_for_timeout(450)
-        check('Aussetzen bis Datum gespeichert', stored(pg)['items'][0]['pauses'] == [{'from': '2026-10-17', 'to': '2026-10-20'}], stored(pg)['items'][0]['pauses'])
+        check('Nur heute oder unbefristet, kein Datum',
+              pg.get_by_test_id('off-today').count() == 1 and pg.get_by_test_id('off-open').count() == 1
+              and pg.locator('#dt-off-until').count() == 0)
+        pg.get_by_test_id('off-open').click(); pg.wait_for_timeout(450)
+        check('Unbefristet ausgesetzt gespeichert', stored(pg)['items'][0]['pauses'] == [{'from': '2026-10-17', 'to': None}], stored(pg)['items'][0]['pauses'])
         check('Karte zeigt den Zustand', card(pg, 'Zigaretten').locator('[data-testid=off]').count() == 1)
-        # Ein Tag nach dem Ende zählt wieder
-        pg.get_by_role('button', name='Verlauf').click(); pg.wait_for_timeout(200)
-        pg.get_by_role('button', name='Zählen').click(); pg.wait_for_timeout(300)
         card(pg, 'Zigaretten').locator('.dt-item__name').click(); pg.wait_for_timeout(450)
-        check('Kopfzeile nennt das Ende', 'ausgesetzt bis' in pg.locator('.dt-fold__head', has_text='Aussetzen').inner_text())
+        check('Kopfzeile nennt den Beginn', 'ausgesetzt seit' in pg.locator('.dt-fold__head', has_text='Aussetzen').inner_text())
         pg.keyboard.press('Escape'); pg.wait_for_timeout(400)
         b.close()
 
@@ -1169,7 +1153,7 @@ for name, fn in [('items', test_create_and_sheet), ('drag', test_sheet_drag), ('
                  ('counter', test_counter_stable), ('reorder', test_reorder), ('jump', test_today_jump_and_calendar), ('ov2', test_overview_v2),
                  ('r3strip', test_round3_strip_and_drop), ('r3scroll', test_round3_scroll), ('r3month', test_round3_month_and_import),
                  ('migrate', test_migration),
-                 ('dir', test_direction),
+                 ('count', test_count),
                  ('gap', test_gap),
                  ('off', test_off),
                  ('about', test_about)]:

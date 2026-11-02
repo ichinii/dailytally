@@ -10,7 +10,7 @@ import { loadData, saveData, emptyData, newId, requestPersistentStorage } from '
 import { buildIndex, dayNum, runningPause } from './lib/stats.js';
 import { dayOfTs, numToKey, mondayOf, formatClock, formatDuration, keyToNum } from './lib/days.js';
 import { periodStart, periodEnd, pauseGoalAt, gapGoalAt, applyCountGoal, applyMinutesGoal, countGoalAt } from './lib/goals.js';
-import { pauseDay, pauseOpen, pauseUntil, resume } from './lib/pauses.js';
+import { pauseDay, pauseOpen, resume } from './lib/pauses.js';
 import { cssMs } from './lib/ui.js';
 import { T } from './strings.js';
 
@@ -182,11 +182,11 @@ export default function App() {
     setData((d) => ({ ...d, entries: d.entries.map((e) => (e.id === entryId ? { ...e, ts } : e)) }));
   }, []);
 
-  const onCreate = useCallback(({ label, period, direction, countGoal, pauseMinutes, gapMinutes }) => {
+  const onCreate = useCallback(({ label, period, countGoal, pauseMinutes, gapMinutes }) => {
     const t = checkDay();
     const from = numToKey(periodStart(period, t));
     const item = {
-      id: newId('i'), label, period, createdDay: numToKey(t), direction,
+      id: newId('i'), label, period, createdDay: numToKey(t),
       countGoals: countGoal ? [{ from, type: countGoal.type, value: countGoal.value }] : [],
       pauseGoals: period === 'day' && pauseMinutes != null ? [{ from, minutes: pauseMinutes }] : [],
       gapGoals: gapMinutes != null ? [{ from, minutes: gapMinutes }] : [],
@@ -195,14 +195,13 @@ export default function App() {
     setData((d) => ({ ...d, items: [...d.items, item] }));
   }, [checkDay]);
 
-  const onUpdate = useCallback((id, { label, direction, countGoal, pauseMinutes, gapMinutes, mode }) => {
+  const onUpdate = useCallback((id, { label, countGoal, pauseMinutes, gapMinutes, mode }) => {
     const t = checkDay();
     setData((d) => ({
       ...d,
       items: d.items.map((it) => {
         if (it.id !== id) return it;
-        // Die Richtung ist reine Anzeige, sie braucht keinen Verlauf.
-        const next = { ...it, label, direction };
+        const next = { ...it, label };
         if (mode) {
           const cur = periodStart(it.period, t);
           const r = indexRef.current.byItem.get(id);
@@ -238,15 +237,13 @@ export default function App() {
     showToast(T.imported);
   }, [checkDay, showToast]);
 
-  const onPauseItem = useCallback((id, { kind, until }) => {
+  const onPauseItem = useCallback((id, { kind }) => {
     const t = checkDay();
     setData((d) => ({
       ...d,
       items: d.items.map((it) => {
         if (it.id !== id) return it;
-        const pauses = kind === 'open' ? pauseOpen(it, t)
-          : kind === 'until' ? pauseUntil(it, t, keyToNum(until))
-          : pauseDay(it, t);
+        const pauses = kind === 'open' ? pauseOpen(it, t) : pauseDay(it, t);
         return { ...it, pauses };
       }),
     }));

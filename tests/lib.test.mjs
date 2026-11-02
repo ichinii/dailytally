@@ -5,7 +5,7 @@ import { dayOfTs, keyToNum, numToKey, mondayOf, weekRangeLabel, tsForDayTime, fo
 import { evaluate, countGoalAt, applyCountGoal } from '../src/lib/goals.js';
 import { buildIndex, dailyPauses, gapBreaks, runningPause, buildSeries, computeItemStats } from '../src/lib/stats.js';
 import { parseImport, exportText } from '../src/lib/importExport.js';
-import { isPausedDay, openPause, pauseDay, pauseOpen, pauseUntil, pausedInPeriod, pausedMask, resume } from '../src/lib/pauses.js';
+import { isPausedDay, openPause, pauseDay, pauseOpen, pausedInPeriod, pausedMask, resume } from '../src/lib/pauses.js';
 
 const at = (y, m, d, h, mi) => new Date(y, m - 1, d, h, mi).getTime();
 const K = keyToNum;
@@ -191,8 +191,6 @@ test('Aussetzen: angrenzende Zeiträume verschmelzen, Beenden teilt auf', () => 
   assert.deepEqual(pauseDay(mk([{ from: '2026-10-05', to: '2026-10-07' }]), K('2026-10-06')),
     [{ from: '2026-10-05', to: '2026-10-07' }]);
   assert.deepEqual(pauseOpen(mk([]), K('2026-11-01')), [{ from: '2026-11-01', to: null }]);
-  assert.deepEqual(pauseUntil(mk([]), K('2026-11-01'), K('2026-11-10')), [{ from: '2026-11-01', to: '2026-11-10' }]);
-  assert.deepEqual(pauseUntil(mk([]), K('2026-11-05'), K('2026-11-01')), [{ from: '2026-11-05', to: '2026-11-05' }], 'Ende vor Beginn wird auf einen Tag gekürzt');
 
   // Beenden: heute zählt wieder
   assert.deepEqual(resume(mk([{ from: '2026-10-20', to: null }]), K('2026-10-25')), [{ from: '2026-10-20', to: '2026-10-24' }]);

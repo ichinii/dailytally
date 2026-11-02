@@ -7,9 +7,9 @@ Datenformat-Version in Klammern, wenn sie sich geändert hat – dann läuft bei
 ## Unveröffentlicht
 
 - Neuer Abschnitt „Über Daily Tally“ im Menü: App- und Datenformat-Version, ein Link zum Melden von Problemen auf GitHub und ein Buy-me-a-coffee-Knopf.
-- **Items aussetzen**: für Urlaub oder bewusste Ausnahmen lässt sich ein Item für heute, bis zu einem Datum oder unbefristet aussetzen – im Item-Sheet unter „Aussetzen“, im Menü auch für alle Items zusammen. Ausgesetzte Tage zählen in keiner Auswertung mit: sie gelten als unbekannt, nicht als null, und hinterlassen im Trend eine Lücke. Der Rückweg („Aussetzen beenden“) steht auf der Karte.
+- **Items aussetzen**: für Urlaub oder bewusste Ausnahmen lässt sich ein Item für heute oder unbefristet aussetzen – im Item-Sheet unter „Aussetzen“, im Menü auch für alle Items zusammen. Ausgesetzte Tage zählen in keiner Auswertung mit: sie gelten als unbekannt, nicht als null, und hinterlassen im Trend eine Lücke. Der Rückweg („Aussetzen beenden“) steht auf der Karte.
 - Neues Ziel **Mindestabstand**: wie viel Zeit zwischen zwei Einträgen liegen soll. Die Karte zeigt, wie lange noch zu warten ist, und zählt zu frühe Einträge. Unabhängig vom bisherigen Pausenziel – beides darf gleichzeitig gesetzt sein (z. B. 1 h zwischen Zigaretten und 12 h über Nacht). Pausenziel und Mindestabstand liegen jetzt hinter der aufklappbaren Zeile „Pausen“.
-- Items haben eine Richtung: „mehr ist besser“ oder „weniger ist besser“. Bei „weniger ist besser“ zeigt die Karte groß das Restbudget statt des steigenden Zählers – und ohne Limit die Zeit seit dem letzten Eintrag. Die Knöpfe behalten ihre Bedeutung: Plus erfasst, Minus korrigiert. Bestehende Items bekommen die Richtung aus ihrem Zieltyp.
+- Hat ein Item ein Zählziel, zeigt die Karte groß „5/8“ statt nur den Stand – und färbt die Zahl, sobald ein Höchstwert überschritten ist. Darunter steht nur noch „Einträge“.
 
 ## 1.0 – 2026-11-02
 

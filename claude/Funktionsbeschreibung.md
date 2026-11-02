@@ -25,7 +25,6 @@ Gespeichert werden einzelne Einträge mit festem Tag und optionaler Uhrzeit; all
 - **Item:** etwas, das gezählt wird. Hat einen Namen, einen Zeitraum (`day`, `week` oder `month`), ein Anlagedatum und optional ein Zählziel und ein Pausenziel. Die Reihenfolge der Items ist die Reihenfolge im Array `items` und lässt sich in der Track-Ansicht ändern.
 - **Eintrag:** ein einzelnes Vorkommen. Speichert immer den Tag (`day`) und, wenn bekannt, den genauen Zeitpunkt (`ts`, Millisekunden seit 1970 UTC). Unbekannte Uhrzeit = `null`, niemals 0.
 - **Zielverlauf:** Ziele werden nicht überschrieben, sondern als Liste mit Startdatum geführt (`from`). Für einen Zeitraum gilt der letzte Eintrag, dessen `from` am oder vor dem Beginn des Zeitraums liegt. `value: null` heißt „ab hier kein Ziel“. `from` ist immer ein Zeitraumbeginn: der Tag bei Tages-Items, der Montag bei Wochen-Items, der Monatserste bei Monats-Items.
-- **Richtung:** jedes Item hat `direction`. `up` heißt „mehr ist besser“ (Sport), `down` heißt „weniger ist besser“ (Zigaretten). Die Richtung bestimmt, welche Zahl die Karte groß anzeigt, nicht die Bedeutung der Knöpfe: Plus erfasst immer ein Ereignis, Minus ist immer die Korrektur.
 - **Mindestabstand:** `gapGoals`, Verlauf in derselben Form wie das Pausenziel (`from`, `minutes` bzw. `null`). Gemeint ist der Abstand zwischen zwei aufeinanderfolgenden Einträgen – unabhängig vom Pausenziel, beides darf gleichzeitig gesetzt sein. Gilt für alle Zeiträume, nicht nur für Tages-Items.
 - **Aussetzen:** `pauses`, Liste von Zeiträumen `{ from, to }` mit Tagesschlüsseln; `to: null` heißt „läuft noch“. Zeiträume sind sortiert, überlappen nicht, und eine offene Pause kann nur die letzte sein. Ausgesetzte Tage fallen aus Auswertungen heraus, sie zählen nicht als null.
 - **Datenformat-Version:** das Feld `version` sagt, nach welcher Fassung ein Datensatz aufgebaut ist. Es ist ein eigener Zähler, unabhängig von der Release-Nummer der App, und steigt höchstens einmal pro Release – oft gar nicht.
@@ -69,7 +68,7 @@ Alte Stände werden nicht verworfen, sondern gehoben. Die Migration ist eine Ket
 | Release | Datenformat-Version |
 | --- | --- |
 | 1.0 | 3 |
-| 1.1 | 4 – `direction`, `gapGoals`, `pauses` je Item |
+| 1.1 | 4 – `gapGoals` und `pauses` je Item |
 
 Der Speicherschlüssel behält dauerhaft seinen historischen Namen `daily-tally-v3`: er ist nur ein Name, ein Umbenennen würde die Daten aller bestehenden Nutzer verwaisen lassen. Die Wahrheit über das Format steht im Feld `version`.
 
@@ -102,7 +101,6 @@ Ein Item wird über einen Hinzufügen-Knopf unter der Liste angelegt (bei leerer
 | Name | ja | Text, max. 40 Zeichen (Hinweis ab 30 Zeichen) |
 | Zeitraum | ja | pro Tag / pro Woche / pro Monat; nach dem Anlegen nicht mehr änderbar (im Bearbeiten-Modus als Marke mit Hinweis) |
 | Zählziel | nein | „kein“ / „höchstens“ / „mindestens“ + ganze Zahl ≥ 1 (Vorschlag 10 bzw. 3) |
-| Richtung | ja | „mehr ist besser“ / „weniger ist besser“. Wird nur gefragt, wenn kein Zählziel gesetzt ist; mit Ziel folgt sie dem Zieltyp (höchstens → weniger ist besser) und wird als Hinweis angezeigt. Änderbar, ohne Rückfrage nach „ab jetzt“ oder „Korrektur“ – die Richtung ist Anzeige, kein Verlauf. |
 | Pausenziel | nein | Schalter + Dauer in Stunden und Minuten (Vorschlag 12 h); nur bei Tages-Items angeboten |
 | Mindestabstand | nein | Schalter + Dauer in Stunden und Minuten (Vorschlag 1 h); bei jedem Zeitraum angeboten. Gemeint ist der Abstand zwischen zwei Einträgen, unabhängig vom Pausenziel – beides darf gleichzeitig gesetzt sein |
 
@@ -154,11 +152,8 @@ Die Hauptansicht besteht aus einem wischbaren Wochenstreifen zur Tagesauswahl un
 
 - Zeigen Name, Bezug („heute“ bzw. das Datum; bei Wochen-Items „diese Woche“ bzw. „Woche vom …“, bei Monats-Items „diesen Monat“ bzw. „Oktober 2026“), den Wert des Zeitraums, das für **diesen** Zeitraum geltende Ziel samt Status (laut Zielverlauf) und einen Fortschritt zum Ziel.
 - Wert: Summe der Einträge im Zeitraum, der den gewählten Tag enthält (Tag, Woche oder Monat). Ändert sich der Wert, hüpft die Zahl kurz.
-- **Welche Zahl groß steht, hängt an der Richtung.** Bei „mehr ist besser“ ist es der Zähler. Bei „weniger ist besser“ ist es
-  - mit Zählziel das Restbudget („3 – noch von 8“), bei Überschreitung der Abstand zum Limit („1 – über dem Limit“); der Fortschrittsbalken leert sich, statt sich zu füllen;
-  - ohne Zählziel die Zeit seit dem letzten Eintrag („2 h 32 min – seit dem letzten Mal“), und solange die unbekannt ist (kein Eintrag oder letzter Eintrag ohne Uhrzeit) der Zähler.
-  Der Zähler selbst bleibt in beiden Fällen als zweite Zeile sichtbar. Grund: ein Zähler, der nach oben läuft, fühlt sich nach Fortschritt an – bei Dingen, die man lassen will, belohnt das die falsche Richtung.
-- **Die Bedeutung der Knöpfe ändert sich nie**, in keiner Richtung: Plus erfasst ein Ereignis, Minus ist die Korrektur. Das Erfassen wird auch bei „weniger ist besser“ nicht erschwert – untererfasste Daten wären schlimmer als eine unbequeme Zahl.
+- **Mit Zählziel zeigt die große Zahl den Stand und das Ziel** („5/8“, Nenner kleiner und leiser). Über einem Höchstwert färbt sich die Zahl; das Wort dazu („2 überschritten“) steht weiter als Marke in der Zielzeile, Farbe ist also nie die einzige Auskunft. Darunter steht nur „Eintrag/Einträge“. Ohne Ziel bleibt es die nackte Zahl.
+- Die Breite des Zählers ist fest, mit Ziel breiter als ohne – die Knöpfe wandern nie, wenn die Zahl wächst.
 - **Plus** legt einen Eintrag am gewählten Tag an. Ist der gewählte Tag heute, wird `ts` = jetzt gespeichert, sonst `ts` = `null`. Fällt der Tageswechsel genau in diesen Moment, wird auf den neuen Tag gebucht.
 - **Minus** entfernt den zuletzt angelegten Eintrag des gewählten Tages. Bei Wochen- und Monats-Items, wenn der gewählte Tag keinen hat: den zuletzt angelegten Eintrag des Zeitraums. Bei Wert 0 deaktiviert.
 - Nach Plus am heutigen Tag erscheint kurz ein Toast „Erfasst 14:32“ mit der Aktion „Zeit ändern“, die die Eintragsliste mit direkt geöffneter Zeitauswahl für diesen Eintrag zeigt. Hatte das Item ein Pausenziel und war die laufende Pause bekannt, steht zusätzlich „Pause beendet: 9 h 40 min“ im selben Toast.
@@ -183,7 +178,7 @@ Die Hauptansicht besteht aus einem wischbaren Wochenstreifen zur Tagesauswahl un
 
 - Ist der gewählte Tag ausgesetzt, zeigt die Karte „ausgesetzt“ (bei Wochen- und Monats-Items mit nur teilweise ausgesetztem Zeitraum „teilweise ausgesetzt“), Plus und Minus sind gesperrt, Pausen- und Abstandszeile ruhen, und an der Stelle der Zielbewertung steht derselbe Hinweis.
 - Ist heute ausgesetzt und heute gewählt, bietet die Karte „Aussetzen beenden“ an – der Rückweg liegt immer auf der Karte, nicht nur im Sheet.
-- Gesetzt wird das Aussetzen im Item-Sheet im aufklappbaren Abschnitt **„Aussetzen“**: heute, unbefristet oder bis zu einem Datum. Der Abschnitt nennt zugeklappt den Zustand („läuft normal“, „ausgesetzt seit …“, „ausgesetzt bis …“) und listet die bisherigen Zeiträume.
+- Gesetzt wird das Aussetzen im Item-Sheet im aufklappbaren Abschnitt **„Aussetzen“**: für heute oder unbefristet. Der Abschnitt nennt zugeklappt den Zustand („läuft normal“, „ausgesetzt seit …“) und listet die bisherigen Zeiträume.
 - Im App-Menü setzt „Heute alles aussetzen“ alle Items für heute aus; läuft irgendwo eine Pause, bietet dieselbe Zeile „Aussetzen überall beenden“ an.
 - „Beenden“ heißt: der heutige Tag zählt wieder. Ein Zeitraum, der dadurch leer würde (am selben Tag begonnen und beendet), verschwindet ganz; ein Beenden mitten in einem befristeten Zeitraum teilt ihn auf. Angrenzende Zeiträume verschmelzen zu einem.
 
@@ -329,30 +324,13 @@ Erfüllt in Handy-Breite und im sandboxed iframe, ohne Fehler in der Konsole. `[
 - [x] Nur den Namen ändern fragt nicht nach „Ab jetzt / Korrektur“.
 - [x] Pausenziel wird nur bei Tages-Items angeboten.
 
-**Richtung**
+**Zähler mit Ziel**
 
-- [x] Ein Item mit „höchstens 8“ zeigt groß das Restbudget und die Beschriftung „noch von 8“; der Zähler steht als zweite Zeile daneben.
-- [x] Über dem Limit zeigt dieselbe Stelle den Abstand zum Limit und „über dem Limit“.
-- [x] Ein Item mit „mindestens“ zeigt unverändert den Zähler und keine zweite Zeile.
-- [x] „Weniger ist besser“ ohne Ziel zeigt groß die Zeit seit dem letzten Eintrag; ohne Eintrag mit Uhrzeit bleibt es beim Zähler.
-- [x] Plus legt auch bei „weniger ist besser“ einen Eintrag an, Minus entfernt ihn.
-- [x] Beim Anlegen wird die Richtung nur ohne Zählziel gefragt; „höchstens“ legt „weniger ist besser“ an.
-
-**Aussetzen**
-
-- [x] Ein heute ausgesetztes Item zeigt „ausgesetzt“, sperrt Plus und Minus, lässt Pausen- und Abstandszeile weg und gibt keine Zielbewertung.
-- [x] „Aussetzen beenden“ auf der Karte lässt heute wieder zählen; am selben Tag begonnen und beendet hinterlässt keinen Zeitraum.
-- [x] Im Sheet lässt sich bis zu einem Datum aussetzen; der Abschnitt nennt danach „ausgesetzt bis …“.
-- [x] Ein ausgesetzter Tag verdünnt den Tagesdurchschnitt nicht (6 Tage mit je 2 Einträgen und ein ausgesetzter Tag ergeben Ø 2/Tag, nicht Ø 1,7/Tag).
-- [x] „Heute alles aussetzen“ im Menü setzt alle Items aus; dieselbe Zeile beendet es überall wieder.
-
-**Mindestabstand**
-
-- [x] Bei 60 min Abstand und letztem Eintrag um 14:00 steht um 14:32 „frühestens in 28 min“ mit Fortschritt; nach genug Zeit „Abstand erfüllt“.
-- [x] Ein zu früher Eintrag wird als „heute 1× zu früh“ gezählt, und die Restzeit beginnt neu.
-- [x] Ein Eintrag ohne Uhrzeit führt zu „Abstand unbekannt“ mit Grund, nicht zu einer geschätzten Zahl.
-- [x] Der Abschnitt „Pausen“ ist zugeklappt, solange nichts gesetzt ist, und zeigt aufgeklappt den Mindestabstand auch bei Wochen-Items (Pausenziel dort nicht).
-- [x] Mehr als 59 Minuten im Minutenfeld wird abgelehnt; ein geänderter Abstand fragt nach „Ab jetzt / Korrektur“ und wird ab Zeitraumbeginn gespeichert.
+- [x] „Höchstens 8“ mit 5 Einträgen zeigt „5/8“, darunter „Einträge“; der Zähler bleibt als Zahl auslesbar.
+- [x] „Mindestens 3“ zeigt genauso „2/3“; ohne Ziel steht die nackte Zahl.
+- [x] Über dem Höchstwert färbt sich die Zahl, genau am Limit nicht; die Marke „überschritten“ bleibt in der Zielzeile.
+- [x] Die Knöpfe verschieben sich nicht, wenn die Zahl von 0 auf 99 wächst – mit und ohne Ziel.
+- [x] Im Anlege-Sheet folgen die Felder in der Reihenfolge Name, Zählen pro, Zählziel, Pausen.
 
 **Track-Ansicht**
 

@@ -33,31 +33,24 @@ test('Kette ist lückenlos und hat einen Schritt pro Release', () => {
 // Beim Anlegen von Schritt N hier einen Block ergänzen:
 //   test('Schritt 3 → 4 …', () => { const up = STEPS.find((s) => s.to === 4).up; … });
 
-test('Schritt 3 → 4: Richtung aus dem Zieltyp, neue Felder leer', () => {
+test('Schritt 3 → 4: neue Felder leer, alles andere unangetastet', () => {
   const up = STEPS.find((s) => s.to === 4).up;
-  const item = (id, countGoals) => ({ id, label: id, period: 'day', createdDay: '2026-10-01', countGoals, pauseGoals: [] });
   const res = up({
     version: 3,
     items: [
-      item('limit', [{ from: '2026-10-01', type: 'max', value: 10 }]),
-      item('ziel', [{ from: '2026-10-01', type: 'min', value: 3 }]),
-      item('ohne', []),
-      // Ein später entferntes Ziel verrät die Richtung weiterhin.
-      item('entfernt', [{ from: '2026-10-01', type: 'max', value: 5 }, { from: '2026-11-01', type: null, value: null }]),
-      item('wechsel', [{ from: '2026-10-01', type: 'max', value: 5 }, { from: '2026-11-01', type: 'min', value: 2 }]),
+      { id: 'a', label: 'A', period: 'day', createdDay: '2026-10-01', countGoals: [{ from: '2026-10-01', type: 'max', value: 10 }], pauseGoals: [{ from: '2026-10-01', minutes: 720 }] },
+      { id: 'b', label: 'B', period: 'week', createdDay: '2026-10-01', countGoals: [], pauseGoals: [] },
     ],
-    entries: [{ id: 'e1', itemId: 'limit', day: '2026-10-02', ts: null }],
+    entries: [{ id: 'e1', itemId: 'a', day: '2026-10-02', ts: null }],
   });
   assert.equal(res.version, 4);
-  const dir = Object.fromEntries(res.items.map((i) => [i.id, i.direction]));
-  assert.deepEqual(dir, { limit: 'down', ziel: 'up', ohne: 'up', entfernt: 'down', wechsel: 'up' });
   for (const it of res.items) {
     assert.deepEqual(it.gapGoals, [], it.id);
     assert.deepEqual(it.pauses, [], it.id);
-    assert.deepEqual(it.pauseGoals, [], it.id);
-    assert.equal(it.label, it.id, 'alles andere bleibt unangetastet');
   }
-  assert.deepEqual(res.entries, [{ id: 'e1', itemId: 'limit', day: '2026-10-02', ts: null }]);
+  assert.deepEqual(res.items[0].countGoals, [{ from: '2026-10-01', type: 'max', value: 10 }]);
+  assert.deepEqual(res.items[0].pauseGoals, [{ from: '2026-10-01', minutes: 720 }]);
+  assert.deepEqual(res.entries, [{ id: 'e1', itemId: 'a', day: '2026-10-02', ts: null }]);
 });
 
 test('Schritt 3 → 4 lässt die Eingabe unverändert', () => {
@@ -100,14 +93,6 @@ test('Rundreise über Export und Import', () => {
 const item4 = (over = {}) => ({ id: 'a', label: 'A', period: 'day', createdDay: '2026-10-01', countGoals: [], pauseGoals: [], gapGoals: [], pauses: [], ...over });
 const data4 = (over = {}) => ({ version: 4, items: [item4(over)], entries: [] });
 
-test('Richtung: nur up und down, alles andere fällt auf up', () => {
-  for (const [given, want] of [['down', 'down'], ['up', 'up'], [undefined, 'up'], ['hoch', 'up'], [null, 'up'], [1, 'up']]) {
-    const res = validateCurrent(data4({ direction: given }));
-    assert.equal(res.ok, true, String(given));
-    assert.equal(res.data.items[0].direction, want, String(given));
-  }
-});
-
 test('Mindestabstand wird wie das Pausenziel geprüft und sortiert', () => {
   const ok = validateCurrent(data4({ gapGoals: [{ from: '2026-11-01', minutes: null }, { from: '2026-10-01', minutes: 60 }] }));
   assert.equal(ok.ok, true, ok.error);
@@ -141,7 +126,7 @@ test('Aussetz-Zeiträume: sortiert, ohne Überlappung, offene Pause nur am Ende'
 test('fehlende neue Felder gelten als leer', () => {
   const res = validateCurrent({ version: 4, items: [{ id: 'a', label: 'A', period: 'day', createdDay: '2026-10-01' }], entries: [] });
   assert.equal(res.ok, true, res.error);
-  assert.deepEqual(res.data.items[0], { id: 'a', label: 'A', period: 'day', createdDay: '2026-10-01', direction: 'up', countGoals: [], pauseGoals: [], gapGoals: [], pauses: [] });
+  assert.deepEqual(res.data.items[0], { id: 'a', label: 'A', period: 'day', createdDay: '2026-10-01', countGoals: [], pauseGoals: [], gapGoals: [], pauses: [] });
 });
 
 // ---------- Negativfälle ----------

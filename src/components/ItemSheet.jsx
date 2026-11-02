@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Button, Icon, Tabs, Tag } from '../kladde/kladde.js';
 import DragSheet from './DragSheet.jsx';
 import { countGoalAt, gapGoalAt, pauseGoalAt, periodStart, countGoalChanged, gapGoalChanged, pauseGoalChanged, PERIODS } from '../lib/goals.js';
-import { formatDayShort, formatDuration, keyToNum, numToKey } from '../lib/days.js';
+import { formatDayShort, formatDuration, keyToNum } from '../lib/days.js';
 import { isPausedDay, openPause } from '../lib/pauses.js';
 import { T } from '../strings.js';
 
@@ -34,8 +34,6 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
   const [name, setName] = useState(item ? item.label : '');
   const [period, setPeriod] = useState(item ? item.period : 'day');
   const [goalType, setGoalType] = useState(initGoal ? initGoal.type : 'none');
-  // Richtung folgt dem Zieltyp; ohne Ziel wird sie gewählt.
-  const [direction, setDirection] = useState(item ? item.direction : 'up');
   const [goalValue, setGoalValue] = useState(initGoal ? String(initGoal.value) : '');
   const [pauseOn, setPauseOn] = useState(initPause != null);
   const [pauseH, setPauseH] = useState(initPause != null ? String(Math.floor(initPause / 60)) : '12');
@@ -47,7 +45,6 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
   const [foldOpen, setFoldOpen] = useState(initPause != null || initGap != null);
   const pausedNow = !!item && isPausedDay(item, today);
   const [offOpen, setOffOpen] = useState(pausedNow);
-  const [until, setUntil] = useState('');
   const [tried, setTried] = useState(false);
   const [asking, setAsking] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -73,7 +70,7 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
     if (!goalOk || !pauseOk || !gapOk) return;
     if ((pauseOn || gapOn) && !foldOpen) setFoldOpen(true);
     if (!editing) {
-      onCreate({ label: trimmed.slice(0, 40), period, direction, countGoal: nextGoal, pauseMinutes: nextPause, gapMinutes: nextGap });
+      onCreate({ label: trimmed.slice(0, 40), period, countGoal: nextGoal, pauseMinutes: nextPause, gapMinutes: nextGap });
       close();
       return;
     }
@@ -85,7 +82,7 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
       setTimeout(() => askRef.current && askRef.current.focus(), 0);
       return;
     }
-    onUpdate(item.id, { label: trimmed.slice(0, 40), direction, countGoal: nextGoal, pauseMinutes: nextPause, gapMinutes: nextGap, mode: changed ? mode : null });
+    onUpdate(item.id, { label: trimmed.slice(0, 40), countGoal: nextGoal, pauseMinutes: nextPause, gapMinutes: nextGap, mode: changed ? mode : null });
     close();
   };
 
@@ -142,13 +139,7 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
             <span className="kl-field__label" id="dt-goal-label">{T.countGoal}</span>
             <div className="dt-goal-row">
               <Tabs label={T.countGoal} value={goalType}
-                onChange={(v) => {
-                  setGoalType(v);
-                  if (v !== 'none' && !goalValue) setGoalValue(v === 'max' ? '10' : '3');
-                  // Ein Höchstwert heißt „weniger ist besser“, ein Mindestwert das Gegenteil.
-                  if (v === 'max') setDirection('down');
-                  if (v === 'min') setDirection('up');
-                }}
+                onChange={(v) => { setGoalType(v); if (v !== 'none' && !goalValue) setGoalValue(v === 'max' ? '10' : '3'); }}
                 items={[{ id: 'none', label: T.goalNone }, { id: 'max', label: T.goalMax }, { id: 'min', label: T.goalMin }]} />
               {goalType !== 'none' && (
                 <input
@@ -159,7 +150,6 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
               )}
             </div>
             {tried && !goalOk && <span className="kl-field__error">{T.goalError}</span>}
-            {goalType !== 'none' && <span className="kl-field__hint dt-tight">{T.dirFromGoal(goalType === 'max' ? T.dirLess : T.dirMore)}</span>}
           </div>
 
 
@@ -237,16 +227,6 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
             )}
           </div>
 
-          {/* Ohne Ziel ist die Richtung nicht ableitbar – dann wird sie gefragt. */}
-          {goalType === 'none' && (
-            <div className="dt-row-field">
-              <span className="kl-field__label" id="dt-dir-label">{T.direction}</span>
-              <Tabs label={T.direction} value={direction} onChange={setDirection}
-                items={[{ id: 'up', label: T.dirMore }, { id: 'down', label: T.dirLess }]} />
-            </div>
-          )}
-          {goalType === 'none' && <span className="kl-field__hint dt-tight">{T.dirHint}</span>}
-
           {editing && (
             <div className="dt-fold">
               <button type="button" className="dt-fold__head" aria-expanded={offOpen} onClick={() => setOffOpen((o) => !o)}>
@@ -256,24 +236,13 @@ export default function ItemSheet({ item, entryCount, today, onCreate, onUpdate,
               </button>
               {offOpen && (
                 <div className="dt-off-actions">
-                  <span className="kl-field__hint dt-tight">{T.offHint}</span>
+                  <span className="kl-field__hint">{T.offHint}</span>
                   {pausedNow
                     ? <Button icon="undo" onClick={() => { onResume(item.id); close(); }} data-testid="off-resume">{T.offResume}</Button>
                     : (
                       <>
                         <Button icon="moon" onClick={() => { onPause(item.id, { kind: 'day' }); close(); }} data-testid="off-today">{T.offToday}</Button>
                         <Button icon="moon" onClick={() => { onPause(item.id, { kind: 'open' }); close(); }} data-testid="off-open">{T.offOpen}</Button>
-                        <div className="dt-row-field">
-                          <label className="kl-field__label" htmlFor="dt-off-until">{T.offUntilLabel}</label>
-                          <input
-                            id="dt-off-until" className="kl-input dt-date" type="date" value={until}
-                            min={numToKey(today)} onChange={(e) => setUntil(e.target.value)}
-                          />
-                          <Button
-                            icon="moon" disabled={!until}
-                            onClick={() => { onPause(item.id, { kind: 'until', until }); close(); }} data-testid="off-until"
-                          >{T.offUntilAction}</Button>
-                        </div>
                       </>
                     )}
                   {item.pauses.length > 0 && (

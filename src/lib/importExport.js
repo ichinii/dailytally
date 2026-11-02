@@ -70,11 +70,10 @@ export function validateCurrent(obj) {
     const pauseGoals = validMinutesGoals(it.pauseGoals ?? []);
     const gapGoals = validMinutesGoals(it.gapGoals ?? []);
     const pauses = validPauses(it.pauses ?? []);
-    const direction = it.direction === 'down' ? 'down' : 'up';
     if (!label || !PERIODS.includes(it.period) || !isValidKey(it.createdDay) || !countGoals || !pauseGoals || !gapGoals || !pauses) return fail('items');
     ids.add(it.id);
     items.push({
-      id: it.id, label, period: it.period, createdDay: it.createdDay, direction,
+      id: it.id, label, period: it.period, createdDay: it.createdDay,
       countGoals, pauseGoals: it.period === 'day' ? pauseGoals : [], gapGoals, pauses,
     });
   }

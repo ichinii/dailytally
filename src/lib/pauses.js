@@ -69,9 +69,6 @@ export const pauseDay = (item, dayNum) => merge(item.pauses, dayNum, dayNum);
 /** Setzt ab heute unbefristet aus. */
 export const pauseOpen = (item, fromNum) => merge(item.pauses, fromNum, Infinity);
 
-/** Setzt von heute bis zu einem Tag aus (einschließlich). */
-export const pauseUntil = (item, fromNum, toNum) => merge(item.pauses, fromNum, Math.max(fromNum, toNum));
-
 /**
  * Beendet das Aussetzen, sodass `dayNum` wieder zählt: alle Zeiträume, die den
  * Tag enthalten, enden am Vortag. Ein Zeitraum, der dadurch leer wird, fällt weg.
