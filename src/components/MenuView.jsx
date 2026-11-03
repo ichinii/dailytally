@@ -8,6 +8,7 @@ import { DATA_VERSION } from '../lib/migrations.js';
 
 const COFFEE_URL = 'https://buymeacoffee.com/svenerdem';
 const ISSUES_URL = 'https://github.com/ichinii/dailytally/issues';
+const AUTHOR_URL = 'https://www.linkedin.com/in/svenerdem';
 /** Build-Zeit-Version aus package.json; 1.1.0 wird als 1.1 gezeigt, passend zum Tag v1.1. */
 const appVersion = (typeof __VERSION__ === 'string' ? __VERSION__ : '0').replace(/\.0$/, '');
 
@@ -225,6 +226,7 @@ export default function MenuView({ data, today, saveState, onReplaceAll, onDelet
           <ul className="kl-list">
             <li><ListRow leading="sparkle" leadTint="butter" title={T.versionRow(appVersion)} meta={T.versionMeta(DATA_VERSION)} /></li>
             <li><ListRow leading="alert" leadTint="peach" title={T.issuesRow} meta={T.issuesMeta} onClick={() => openExternal(ISSUES_URL)} /></li>
+            <li><ListRow leading="star" leadTint="lilac" title={T.authorRow} meta={T.authorMeta} onClick={() => openExternal(AUTHOR_URL)} /></li>
           </ul>
           <p className="dt-small kl-muted">{T.coffeeText}</p>
           {/* Markenknopf: bewusst in den Farben von Buy me a coffee, siehe Design.md */}

@@ -6,7 +6,7 @@ Datenformat-Version in Klammern, wenn sie sich geändert hat – dann läuft bei
 
 ## Unveröffentlicht
 
-– noch nichts –
+- Im Abschnitt „Über Daily Tally“ führt eine Zeile zum LinkedIn-Profil des Autors.
 
 ## 1.1 – 2026-11-02
 

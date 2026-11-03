@@ -1197,8 +1197,10 @@ def test_about():
         pg.evaluate("() => { window.open = (u) => { window.__opened(u); return {}; }; }")
         pg.get_by_role('button', name='Problem melden').click(); pg.wait_for_timeout(200)
         pg.get_by_role('button', name='Buy me a coffee').click(); pg.wait_for_timeout(200)
+        pg.get_by_role('button', name='Sven Erdem').click(); pg.wait_for_timeout(200)
         check('Problem melden führt zu den GitHub-Issues', 'https://github.com/ichinii/dailytally/issues' in opened, opened)
         check('Kaffee-Knopf führt zu buymeacoffee', 'https://buymeacoffee.com/svenerdem' in opened, opened)
+        check('Die Zeile zum Autor führt zum LinkedIn-Profil', 'https://www.linkedin.com/in/svenerdem' in opened, opened)
         check('Die App navigiert nicht selbst weg', pg.url.endswith('index.html'), pg.url)
         b.close()
 

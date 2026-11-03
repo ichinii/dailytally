@@ -248,7 +248,7 @@ Icon, Mark, Button (primary · secondary · ghost · danger · fab), Card, Check
 
 ### 9.11a Abschnitt „Über“ im Menü
 
-- Eigene `paper`-Karte unter den Daten-Abschnitten: `kl-list` mit „Version 1.1“ (butter, sparkle; Meta nennt das Datenformat) und „Problem melden“ (peach, alert, führt zu GitHub). Die Versionszeile ist keine Aktion und hat deshalb keinen Pfeil.
+- Eigene `paper`-Karte unter den Daten-Abschnitten: `kl-list` mit „Version 1.1“ (butter, sparkle; Meta nennt das Datenformat), „Problem melden“ (peach, alert, führt zu GitHub) und dem Namen des Autors (lilac, star, führt zum LinkedIn-Profil). Die Versionszeile ist keine Aktion und hat deshalb keinen Pfeil.
 - Darunter ein Satz, dass die App kostenlos und ohne Werbung ist, dann der Buy-me-a-coffee-Knopf in Markenfarbe (siehe Regeln unter „Farben“).
 - Externe Ziele öffnen in einem eigenen Tab, damit die installierte App nicht aus sich heraus wegnavigiert.
 

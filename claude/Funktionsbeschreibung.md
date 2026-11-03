@@ -269,7 +269,7 @@ Der Zeitraum eines Prototyp-Items wird aus `period`/`type`/`frequency` erraten (
 **Über die App**
 
 - Zeigt die Version der App (aus `package.json`, zur Bauzeit eingesetzt; `1.1.0` wird als „1.1“ angezeigt, passend zum Tag) und als Nebenzeile die Datenformat-Version – beides hilft bei Rückfragen zu einem Gerät.
-- „Problem melden“ öffnet die GitHub-Fehlerliste des Projekts, „Buy me a coffee“ die Seite des Dienstes. Beide in einem eigenen Tab, damit die installierte App nicht aus sich heraus wegnavigiert; klappt das Öffnen nicht, wird dieselbe Adresse direkt angesteuert.
+- „Problem melden“ öffnet die GitHub-Fehlerliste des Projekts, die Zeile mit dem Namen des Autors sein LinkedIn-Profil, „Buy me a coffee“ die Seite des Dienstes. Beide in einem eigenen Tab, damit die installierte App nicht aus sich heraus wegnavigiert; klappt das Öffnen nicht, wird dieselbe Adresse direkt angesteuert.
 
 **Alle Daten löschen**
 
@@ -367,7 +367,7 @@ Erfüllt in Handy-Breite und im sandboxed iframe, ohne Fehler in der Konsole. `[
 **Mehr und Daten**
 
 - [x] Der Abschnitt „Über“ nennt die App-Version und die Datenformat-Version.
-- [x] „Problem melden“ und „Buy me a coffee“ zeigen auf die richtigen Adressen und öffnen in einem eigenen Tab.
+- [x] „Problem melden“, die Autoren-Zeile und „Buy me a coffee“ zeigen auf die richtigen Adressen und öffnen in einem eigenen Tab.
 - [x] Export, dann „Alle Daten löschen“, dann Import stellt exakt den alten Zustand her.
 - [x] Ein Export aus dem Prototyp (v2, und v1) lässt sich importieren; Werte pro Tag stimmen.
 - [x] Import per eingefügtem Text funktioniert wie der Import per Datei.

@@ -104,6 +104,8 @@ export const T = {
   coffeeText: 'Daily Tally ist kostenlos und ohne Werbung. Wenn sie dir hilft, freue ich mich über einen Kaffee.',
   issuesRow: 'Problem melden',
   issuesMeta: 'Öffnet die Fehlerliste auf GitHub',
+  authorRow: 'Sven Erdem',
+  authorMeta: 'Wer die App gebaut hat – auf LinkedIn',
 
   // Toasts
   captured: (time) => `Erfasst ${time}`,
